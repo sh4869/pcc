@@ -18,9 +18,14 @@
   },
   "homepage": "https://github.com/sh4869/update-suggester#readme",
   "dependencies": {
+    "npm-api": "^1.0.0",
+    "npm-registry-package-info": "^1.0.5",
+    "package-json": "^6.4.0",
     "typescript": "^3.4.5"
   },
   "devDependencies": {
+    "@types/npm-registry-package-info": "^1.0.0",
+    "prettier": "^1.18.2",
     "ts-node": "^8.1.0"
   }
 }
