@@ -2,23 +2,40 @@ import pkginfo = require("npm-registry-package-info");
 
 import packagejson from "package-json";
 
+import util = require("util");
+
 const opts: pkginfo.Options = {
-  packages: ["npm-api","jest"]
+  packages: ["npm-api", "jest"]
 };
 
 interface PkgData {
-  versions: { [key: string]: packagejson.FullMetadata };
+  versions: { [key: string]: packagejson.AbbreviatedVersion };
 }
+
 type PkgDataInfo = { [key: string]: PkgData };
 
-pkginfo(opts, (error, data) => {
-  const pkgdatainfo = data.data as PkgDataInfo;
+type Dependencies = {[name: string]: string };
+
+const getPackageDependencies = async (packages: string[]) => {
+  const opts: pkginfo.Options = {
+    packages: packages
+  };
+  const pkginfoPromise = util.promisify(pkginfo);
+  const result = await pkginfoPromise(opts);
+  const pkgdatainfo = result.data as PkgDataInfo;
+  let map = new Map<string, Map<string, Dependencies>>()
   for (let x in pkgdatainfo) {
+    const xmap = new Map<string, Dependencies>();
     for (let y in pkgdatainfo[x].versions) {
       console.log(pkgdatainfo[x].versions[y].dependencies);
+      xmap.set(y, pkgdatainfo[x].versions[y].dependencies as {[name: string]: string })
     }
+    map.set(x,xmap);
   }
-});
+  return map;
+};
+
+getPackageDependencies(["npm-api"]).then(v => console.log(v));
 
 interface Dependency {
   name: string;
