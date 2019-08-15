@@ -21,11 +21,13 @@
     "npm-api": "^1.0.0",
     "npm-registry-package-info": "^1.0.5",
     "package-json": "^6.4.0",
+    "semver": "^6.3.0",
     "typescript": "^3.4.5"
   },
   "devDependencies": {
-    "@types/node": "^12.6.2",
+    "@types/node": "^12.7.2",
     "@types/npm-registry-package-info": "^1.0.0",
+    "@types/semver": "^6.0.1",
     "prettier": "^1.18.2",
     "ts-node": "^8.1.0"
   }
