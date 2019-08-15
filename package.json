@@ -19,6 +19,7 @@
   "homepage": "https://github.com/sh4869/update-suggester#readme",
   "dependencies": {
     "npm-api": "^1.0.0",
+    "npm-logical-tree": "^1.2.1",
     "npm-registry-package-info": "^1.0.5",
     "package-json": "^6.4.0",
     "read-package-json": "^2.1.0",

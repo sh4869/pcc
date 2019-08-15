@@ -1,5 +1,6 @@
 import pkginfo = require("npm-registry-package-info");
 import readJson = require("read-package-json");
+import logicTree = require("npm-logical-tree");
 
 import util = require("util");
 import semver, { SemVer } from "semver";
