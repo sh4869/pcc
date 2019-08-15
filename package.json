@@ -21,6 +21,7 @@
     "npm-api": "^1.0.0",
     "npm-registry-package-info": "^1.0.5",
     "package-json": "^6.4.0",
+    "read-package-json": "^2.1.0",
     "semver": "^6.3.0",
     "typescript": "^3.4.5"
   },

@@ -1,8 +1,11 @@
 import pkginfo = require("npm-registry-package-info");
+import readJson = require("read-package-json");
 
 import util = require("util");
 import semver, { SemVer } from "semver";
 import { PkgDataInfo, PackageDependenciesInfo, Dependencies } from "./type";
+import packagejson from "package-json";
+import packageJson = require("package-json");
 
 // npm-registory-package-infoを使ってPkgDataInfoを取得する
 const getPackageInfo = async (opts: pkginfo.Options) => {
@@ -33,4 +36,11 @@ const getPackageDependencies = async (packages: string[]): Promise<Map<string, P
   return map;
 };
 
-getPackageDependencies(["npm-api"]).then(v => console.log(v));
+const getPackageJsonInfo = async (path: string): Promise<packageJson.FullVersion> => {
+  const readJosnPromise = util.promisify(readJson);
+  return (await readJosnPromise(path)) as packagejson.FullVersion;
+};
+
+getPackageJsonInfo("package.json").then(v => console.log(v));
+
+//getPackageDependencies(["npm-api"]).then(v => console.log(v));
