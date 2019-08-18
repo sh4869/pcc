@@ -13,10 +13,8 @@ import {
   ConflictInfo,
   DependencyRootInfo
 } from "./type";
-import packagejson from "package-json";
 import packageJson = require("package-json");
 import { readFileSync } from "fs";
-import { createHash } from "crypto";
 
 // npm-registory-package-infoを使ってPkgDataInfoを取得する
 const getPackageInfo = async (opts: pkginfo.Options) => {
@@ -48,17 +46,20 @@ const getPackageDependencies = async (packages: string[]): Promise<Map<string, P
   return map;
 };
 
+/**
+ * Jsonファイルを読み込んでparseする
+ * @param path パス
+ */
 const getJsondata = (path: string): any => {
-  const result = readFileSync(path).toString();
-  return JSON.parse(result);
+  return JSON.parse(readFileSync(path).toString());
 };
 
-const getLogicTree = () => {
+const getLogicTree = (): LogicalTree => {
   return logicTree(getJsondata("package.json"), getJsondata("package-lock.json")) as LogicalTree;
 };
 
 /**
- * 依存関係のtreeを取り除く
+ * 依存関係から必要なものだけを取り出す（dev onlyとかはいらないので）
  * @param logicalTree 依存関係のtree
  */
 const getRealLogicalTree = (logicalTree: LogicalTree): Map<string, LogicalTree> => {
@@ -73,6 +74,10 @@ const getRealLogicalTree = (logicalTree: LogicalTree): Map<string, LogicalTree> 
   return realDep;
 };
 
+/**
+ * 依存関係から依存関係の衝突を探す
+ * @param dependencis 依存関係
+ */
 const getConfilct = (dependencis: Map<string, LogicalTree>): ConflictInfo => {
   let deps: ConflictInfo = {};
   let check = new Set<string>();
@@ -97,10 +102,7 @@ const getConfilct = (dependencis: Map<string, LogicalTree>): ConflictInfo => {
   };
   dependencis.forEach(v => addVersion(v, [], { name: "#ROOT", version: "" }));
   for (let i in deps) {
-    if (deps[i].length == 1) {
-      delete deps[i];
-      continue;
-    }
+    // すべてのバージョンが同じバージョンであれば無視
     const firstVersion = deps[i][0].version;
     if (deps[i].every(v => v.version === firstVersion)) {
       delete deps[i];
@@ -109,6 +111,10 @@ const getConfilct = (dependencis: Map<string, LogicalTree>): ConflictInfo => {
   return deps;
 };
 
+/**
+ * 依存関係の衝突から解決出来る依存関係の衝突を選ぶ
+ * @param conflictinfo 依存関係の衝突に関する情報
+ */
 const getSolvableConflicts = (conflictinfo: ConflictInfo): ConflictInfo => {
   const solvableConfilts = {};
   for (let x in conflictinfo) {
@@ -123,6 +129,12 @@ const getSolvableConflicts = (conflictinfo: ConflictInfo): ConflictInfo => {
   return solvableConfilts;
 };
 
+/**
+ * 依存関係の衝突が解決出来るバージョンの組み合わせを探索する
+ * @param name
+ * @param dependencyRootInfo パッケージがどのような流れで必要とされているかを表示する
+ * @param allowDowngrade バージョンを下げて解決することを許すかどうか
+ */
 const searchNonConfilictVersion = async (
   name: string,
   dependencyRootInfo: DependencyRootInfo[],
@@ -147,10 +159,16 @@ const searchNonConfilictVersion = async (
     if (toCheckVersion.length === 0) {
       continue;
     }
+    // 上げられる場合にどういう依存関係のグラフを辿るかを保存する
     toCheckVersion.forEach(v => {
       const dependencyInfo = packageVersions.get(v);
-      if (dependencyInfo !== undefined) {
-        dependencyInfo;
+
+      if (dependencyInfo) {
+        // どういう依存関係のツリーを持つかを計算
+        const dependecyList = [];
+        // TODO: ここよく考えると半端ない量のバージョンの組み合わせが存在し得るのでは
+        for (let x in dependencyInfo) {
+        }
       }
     });
   }
