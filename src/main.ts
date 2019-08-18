@@ -137,7 +137,7 @@ const searchNonConfilictVersion = async (
         console.log(dependencyInfo);
         // どういう依存関係のツリーを持つかを計算
         const dependecyList = [];
-        // TODO: ここよく考えると半端ない量のバージョンの組み合わせが存在し得るのでは
+        // バージョンの表記に対してvalidかつlatestなバージョンを取るようにする
         for (let x in dependencyInfo) {
         }
       }
