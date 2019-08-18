@@ -15,37 +15,7 @@ import {
 } from "./type";
 import packageJson = require("package-json");
 import { readFileSync } from "fs";
-
-// npm-registory-package-infoを使ってPkgDataInfoを取得する
-const getPackageInfo = async (opts: pkginfo.Options) => {
-  const pkginfoPromise = util.promisify(pkginfo);
-  const result = await pkginfoPromise(opts);
-  return result.data as PkgDataInfo;
-};
-
-/**
- * 与えられたパッケージの依存関係を返す
- * TODO: キャッシュを残す
- * @param packages パッケージ名の配列
- */
-const getPackageDependencies = async (packages: string[]): Promise<Map<string, PackageDependenciesInfo>> => {
-  const pkgdatainfo = await getPackageInfo({ packages: packages });
-  const map = new Map<string, PackageDependenciesInfo>();
-  for (let name in pkgdatainfo) {
-    const xmap = new Map<SemVer, Dependencies>();
-    for (let ver in pkgdatainfo[name].versions) {
-      const version = semver.parse(ver);
-      if (version) {
-        xmap.set(version, pkgdatainfo[name].versions[ver].dependencies || {});
-      } else {
-        throw new Error(`Semantic Version Parse Error: ${name} - ${ver}`);
-      }
-    }
-    map.set(name, xmap);
-  }
-  return map;
-};
-
+import { getPackageDependencies } from "./get_package_info";
 /**
  * Jsonファイルを読み込んでparseする
  * @param path パス
@@ -164,6 +134,7 @@ const searchNonConfilictVersion = async (
       const dependencyInfo = packageVersions.get(v);
 
       if (dependencyInfo) {
+        console.log(dependencyInfo);
         // どういう依存関係のツリーを持つかを計算
         const dependecyList = [];
         // TODO: ここよく考えると半端ない量のバージョンの組み合わせが存在し得るのでは
