@@ -9,14 +9,16 @@ let cache: PkgDataInfo = {};
 
 // npm-registory-package-infoを使ってPkgDataInfoを取得する
 const getPackageInfo = async (opts: pkginfo.Options) => {
-  const pkginfoPromise = util.promisify(pkginfo);
   const newOpts = { packages: opts.packages.filter(v => !Object.keys(cache).includes(v)) };
-  const newData = (await pkginfoPromise(newOpts)).data as PkgDataInfo;
-  let result = {};
-  // キャッシュを保存
-  for (let i in newData) {
-    cache[i] = newData[i];
+  if (newOpts.packages.length > 0) {
+    const pkginfoPromise = util.promisify(pkginfo);
+    const newData = (await pkginfoPromise(newOpts)).data as PkgDataInfo;
+    // キャッシュを保存
+    for (let i in newData) {
+      cache[i] = newData[i];
+    }
   }
+  let result = {};
   // キャッシュからデータを取り出し
   // 非効率的だけど大した数にはならないので
   opts.packages.forEach(v => {
