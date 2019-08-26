@@ -99,6 +99,46 @@ const getSolvableConflicts = (conflictinfo: ConflictInfo): ConflictInfo => {
   return solvableConfilts;
 };
 
+// 条件式とバージョンの配列からその条件式に当てはまる最新のバージョンを取得する
+const getValidLatestVersion = (condition: string, versions: semver.SemVer[]): semver.SemVer => {
+  return versions.filter(v => semver.satisfies(v.version, condition)).sort((a, b) => (semver.gt(a, b) ? -1 : 1))[0];
+};
+
+/**
+ * あるパッケージの名前とバージョンからそのパッケージが必要とするパッケージの配列(自分を含める)を返す
+ * @param name パッケージ名
+ * @param version バージョン番号
+ */
+const getDependecies = async (name: string, version: semver.SemVer): Promise<SimplePackageInfo[]> => {
+  const dependecyList: SimplePackageInfo[] = [];
+  const addDependency = async (
+    packageInfo: SimplePackageInfo,
+    dependecy: Map<semver.SemVer, Dependencies>
+  ): Promise<void> => {
+    dependecyList.push(packageInfo);
+    // 当てはまるバージョンの依存関係を取得する
+    const verisonDependecy = dependecy.get(
+      Array.from(dependecy.keys()).filter(v => v.version === packageInfo.version)[0]
+    );
+    if (verisonDependecy) {
+      const dependecyNames = Array.from(Object.keys(verisonDependecy));
+      const packageDependecyInfo = await getPackageDependencies(dependecyNames);
+      for (let name in verisonDependecy) {
+        const versions = packageDependecyInfo.get(name);
+        if (versions) {
+          const targetVersion = getValidLatestVersion(verisonDependecy[name], Array.from(versions.keys()));
+          await addDependency({ name: name, version: targetVersion.version }, versions);
+        }
+      }
+    }
+  };
+  const packageDependecy = (await getPackageDependencies([name])).get(name);
+  if (packageDependecy) {
+    await addDependency({ name: name, version: version.version }, packageDependecy);
+  }
+  return dependecyList;
+};
+
 /**
  * 依存関係の衝突が解決出来るバージョンの組み合わせを探索する
  * @param name
@@ -112,6 +152,7 @@ const searchNonConfilictVersion = async (
 ) => {
   let result = false;
   for (let x in dependencyRootInfo) {
+    const packageName = dependencyRootInfo[x].name;
     // プロジェクトから直接参照されている場合はそのパッケージのバージョンの候補を探す
     // プロジェクト以外から参照されている場合はそのパッケージの一番親のパッケージのバージョンの候補を探す
     const requiredpackage =
@@ -129,19 +170,11 @@ const searchNonConfilictVersion = async (
     if (toCheckVersion.length === 0) {
       continue;
     }
-    // 上げられる場合にどういう依存関係のグラフを辿るかを保存する
-    toCheckVersion.forEach(v => {
-      const dependencyInfo = packageVersions.get(v);
-
-      if (dependencyInfo) {
-        console.log(dependencyInfo);
-        // どういう依存関係のツリーを持つかを計算
-        const dependecyList = [];
-        // バージョンの表記に対してvalidかつlatestなバージョンを取るようにする
-        for (let x in dependencyInfo) {
-        }
-      }
-    });
+    // バージョンが上げられる場合にどういう依存関係のグラフを辿るかを保存する
+    for (let v of toCheckVersion) {
+      const depndecyList = await getDependecies(packageName, v);
+      console.log(packageName, v.version, depndecyList);
+    }
   }
   console.log(result);
 };
