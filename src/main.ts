@@ -11,7 +11,8 @@ import {
   LogicalTree,
   SimplePackageInfo,
   ConflictInfo,
-  DependencyRootInfo
+  DependencyRootInfo,
+  PackageDepndecyList
 } from "./type";
 import packageJson = require("package-json");
 import { readFileSync } from "fs";
@@ -109,7 +110,7 @@ const getValidLatestVersion = (condition: string, versions: semver.SemVer[]): se
  * @param name パッケージ名
  * @param version バージョン番号
  */
-const getDependecies = async (name: string, version: semver.SemVer): Promise<SimplePackageInfo[]> => {
+const getDependecies = async (name: string, version: semver.SemVer): Promise<PackageDepndecyList> => {
   const dependecyList: SimplePackageInfo[] = [];
   const addDependency = async (
     packageInfo: SimplePackageInfo,
@@ -136,12 +137,17 @@ const getDependecies = async (name: string, version: semver.SemVer): Promise<Sim
   if (packageDependecy) {
     await addDependency({ name: name, version: version.version }, packageDependecy);
   }
-  return dependecyList;
+  return {
+    package: { name: name, version: version.version },
+    depndecies: dependecyList
+  };
 };
 
 /**
  * 依存関係の衝突が解決出来るバージョンの組み合わせを探索する
- * @param name
+ * @see https://scrapbox.io/sh4869/%E3%83%91%E3%83%83%E3%82%B1%E3%83%BC%E3%82%B8%E3%81%AE%E4%BE%9D%E5%AD%98%E9%96%A2%E4%BF%82%E3%81%AE%E8%A1%9D%E7%AA%81%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6
+ *
+ * @param name 依存関係が衝突しているパッケージ
  * @param dependencyRootInfo パッケージがどのような流れで必要とされているかを表示する
  * @param allowDowngrade バージョンを下げて解決することを許すかどうか
  */
@@ -150,33 +156,35 @@ const searchNonConfilictVersion = async (
   dependencyRootInfo: DependencyRootInfo[],
   allowDowngrade: boolean = false
 ) => {
-  let result = false;
+  let conflictCausesVersions: { [name: string]: Map<semver.SemVer, PackageDepndecyList> } = {};
   for (let x in dependencyRootInfo) {
-    const packageName = dependencyRootInfo[x].name;
-    // プロジェクトから直接参照されている場合はそのパッケージのバージョンの候補を探す
-    // プロジェクト以外から参照されている場合はそのパッケージの一番親のパッケージのバージョンの候補を探す
-    const requiredpackage =
+    // チェックするべきバージョンと
+    const versionDependecyMap = new Map<semver.SemVer, PackageDepndecyList>();
+    // 確認するパッケージ
+    // プロジェクトから直接参照されている場合，パッケージそのもの．そうでない場合，ルートのパッケージを確認．
+    const checkPackage =
       dependencyRootInfo[x].bigParent.name === "#ROOT"
         ? { name: dependencyRootInfo[x].name, version: dependencyRootInfo[x].version }
         : dependencyRootInfo[x].bigParent;
-    const packageVersions = (await getPackageDependencies([requiredpackage.name])).get(requiredpackage.name);
-    const currentVersion = semver.parse(requiredpackage.version);
+    const currentVersion = semver.parse(checkPackage.version);
+    const packageVersions = (await getPackageDependencies([checkPackage.name])).get(checkPackage.name);
     if (!packageVersions || !currentVersion) {
       throw new Error("Package info does not found");
     }
+    // 現在のバージョンの依存関係グラフを取得する
+    const currentVersionDepndecyList = await getDependecies(checkPackage.name, currentVersion);
+    versionDependecyMap.set(currentVersion, currentVersionDepndecyList);
     const toCheckVersion = allowDowngrade
       ? Array.from(packageVersions.keys())
       : Array.from(packageVersions.keys()).filter(v => semver.gt(v, currentVersion));
-    if (toCheckVersion.length === 0) {
-      continue;
-    }
     // バージョンが上げられる場合にどういう依存関係のグラフを辿るかを保存する
     for (let v of toCheckVersion) {
-      const depndecyList = await getDependecies(packageName, v);
-      console.log(packageName, v.version, depndecyList);
+      const depndecyList = await getDependecies(checkPackage.name, v);
+      versionDependecyMap.set(v, depndecyList);
     }
+    conflictCausesVersions[checkPackage.name] = versionDependecyMap;
   }
-  console.log(result);
+  // conflictCausesVersionsからそれぞれ全部の組み合わせを試す
 };
 
 const solvableConfilts = getSolvableConflicts(getConfilct(getRealLogicalTree(getLogicTree())));
