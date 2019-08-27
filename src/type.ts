@@ -1,11 +1,4 @@
 import { SemVer } from "semver";
-import packagejson from "package-json";
-
-export interface PkgData {
-  versions: { [key: string]: packagejson.AbbreviatedVersion };
-}
-
-export type PkgDataInfo = { [key: string]: PkgData };
 
 export type DependecyRange = string;
 
@@ -26,7 +19,7 @@ export type SimplePackageInfo = { name: string; version: string };
  */
 export interface PackageDepndecyList {
   package: SimplePackageInfo;
-  depndecies: SimplePackageInfo[];
+  depndecies: Set<SimplePackageInfo>;
 }
 
 /**

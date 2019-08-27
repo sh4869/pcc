@@ -1,12 +1,8 @@
-import pkginfo = require("npm-registry-package-info");
-import readJson = require("read-package-json");
 import logicTree = require("npm-logical-tree");
 
-import util = require("util");
+import { uniq } from "underscore";
 import semver, { SemVer } from "semver";
 import {
-  PkgDataInfo,
-  PackageDependenciesInfo,
   Dependencies,
   LogicalTree,
   SimplePackageInfo,
@@ -14,19 +10,25 @@ import {
   DependencyRootInfo,
   PackageDepndecyList
 } from "./type";
-import packageJson = require("package-json");
 import { readFileSync } from "fs";
 import { getPackageDependencies } from "./get_package_info";
+import { join } from "path";
+
 /**
  * Jsonファイルを読み込んでparseする
  * @param path パス
  */
+/* eslint-disable */
 const getJsondata = (path: string): any => {
   return JSON.parse(readFileSync(path).toString());
 };
+/* eslint-enable */
 
-const getLogicTree = (): LogicalTree => {
-  return logicTree(getJsondata("package.json"), getJsondata("package-lock.json")) as LogicalTree;
+const getLogicTree = (path: string): LogicalTree => {
+  return logicTree(
+    getJsondata(join(path, "package.json")),
+    getJsondata(join(path, "package-lock.json"))
+  ) as LogicalTree;
 };
 
 /**
@@ -50,9 +52,13 @@ const getRealLogicalTree = (logicalTree: LogicalTree): Map<string, LogicalTree> 
  * @param dependencis 依存関係
  */
 const getConfilct = (dependencis: Map<string, LogicalTree>): ConflictInfo => {
-  let deps: ConflictInfo = {};
-  let check = new Set<string>();
-  const addVersion = (logicalTree: LogicalTree, parentArray: SimplePackageInfo[], bigParent: SimplePackageInfo) => {
+  const deps: ConflictInfo = {};
+  const check = new Set<string>();
+  const addVersion = (
+    logicalTree: LogicalTree,
+    parentArray: SimplePackageInfo[],
+    bigParent: SimplePackageInfo
+  ): void => {
     const key =
       Buffer.from(logicalTree.name, "utf-8").toString("base64") +
       Buffer.from(logicalTree.version, "utf-8").toString("base64");
@@ -72,7 +78,7 @@ const getConfilct = (dependencis: Map<string, LogicalTree>): ConflictInfo => {
     }
   };
   dependencis.forEach(v => addVersion(v, [], { name: "#ROOT", version: "" }));
-  for (let i in deps) {
+  for (const i in deps) {
     // すべてのバージョンが同じバージョンであれば無視
     const firstVersion = deps[i][0].version;
     if (deps[i].every(v => v.version === firstVersion)) {
@@ -88,7 +94,7 @@ const getConfilct = (dependencis: Map<string, LogicalTree>): ConflictInfo => {
  */
 const getSolvableConflicts = (conflictinfo: ConflictInfo): ConflictInfo => {
   const solvableConfilts = {};
-  for (let x in conflictinfo) {
+  for (const x in conflictinfo) {
     const depends = conflictinfo[x];
     // 依存の衝突の大元が同じパッケージの場合ユーザーには解決出来ない
     const bigParents = depends.map(d => d.bigParent.name);
@@ -111,24 +117,28 @@ const getValidLatestVersion = (condition: string, versions: semver.SemVer[]): se
  * @param version バージョン番号
  */
 const getDependecies = async (name: string, version: semver.SemVer): Promise<PackageDepndecyList> => {
-  const dependecyList: SimplePackageInfo[] = [];
+  const dependecyList: Set<SimplePackageInfo> = new Set();
+  const dependecyMap: Map<string, SimplePackageInfo> = new Map();
   const addDependency = async (
     packageInfo: SimplePackageInfo,
     dependecy: Map<semver.SemVer, Dependencies>
   ): Promise<void> => {
-    dependecyList.push(packageInfo);
-    // 当てはまるバージョンの依存関係を取得する
-    const verisonDependecy = dependecy.get(
-      Array.from(dependecy.keys()).filter(v => v.version === packageInfo.version)[0]
-    );
-    if (verisonDependecy) {
-      const dependecyNames = Array.from(Object.keys(verisonDependecy));
-      const packageDependecyInfo = await getPackageDependencies(dependecyNames);
-      for (let name in verisonDependecy) {
-        const versions = packageDependecyInfo.get(name);
-        if (versions) {
-          const targetVersion = getValidLatestVersion(verisonDependecy[name], Array.from(versions.keys()));
-          await addDependency({ name: name, version: targetVersion.version }, versions);
+    if (!dependecyMap.has(JSON.stringify(packageInfo))) {
+      dependecyMap.set(JSON.stringify(packageInfo), packageInfo);
+      dependecyList.add(packageInfo);
+      // 当てはまるバージョンの依存関係を取得する
+      const verisonDependecy = dependecy.get(
+        Array.from(dependecy.keys()).filter(v => v.version === packageInfo.version)[0]
+      );
+      if (verisonDependecy) {
+        const dependecyNames = Array.from(Object.keys(verisonDependecy));
+        const packageDependecyInfo = await getPackageDependencies(dependecyNames);
+        for (const name in verisonDependecy) {
+          const versions = packageDependecyInfo.get(name);
+          if (versions) {
+            const targetVersion = getValidLatestVersion(verisonDependecy[name], Array.from(versions.keys()));
+            await addDependency({ name: name, version: targetVersion.version }, versions);
+          }
         }
       }
     }
@@ -143,6 +153,31 @@ const getDependecies = async (name: string, version: semver.SemVer): Promise<Pac
   };
 };
 
+const checkConflicts = (target: string, gathering: PackageDepndecyList[]): void => {
+  const packages: { [name: string]: Array<string> } = {};
+  gathering
+    .map(v => v.depndecies)
+    .forEach(v =>
+      Array.from(v.values()).forEach(d => {
+        if (packages[d.name]) {
+          packages[d.name].push(d.version);
+        } else {
+          packages[d.name] = [d.version];
+        }
+      })
+    );
+
+  for (const x in packages) {
+    packages[x] = uniq(packages[x]);
+  }
+  if (packages[target].length == 1) {
+    console.log(`resolve ${target} conflict use`);
+    gathering.forEach(v => {
+      console.log(`* ${v.package.name} - ${v.package.version}`);
+    });
+  }
+};
+
 /**
  * 依存関係の衝突が解決出来るバージョンの組み合わせを探索する
  * @see https://scrapbox.io/sh4869/%E3%83%91%E3%83%83%E3%82%B1%E3%83%BC%E3%82%B8%E3%81%AE%E4%BE%9D%E5%AD%98%E9%96%A2%E4%BF%82%E3%81%AE%E8%A1%9D%E7%AA%81%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6
@@ -154,23 +189,18 @@ const getDependecies = async (name: string, version: semver.SemVer): Promise<Pac
 const searchNonConfilictVersion = async (
   name: string,
   dependencyRootInfo: DependencyRootInfo[],
-  allowDowngrade: boolean = false
-) => {
-  let conflictCausesVersions: { [name: string]: Map<semver.SemVer, PackageDepndecyList> } = {};
-  for (let x in dependencyRootInfo) {
-    // チェックするべきバージョンと
+  allowDowngrade = false
+): Promise<void> => {
+  const conflictCausesVersions: { [name: string]: Map<semver.SemVer, PackageDepndecyList> } = {};
+  for (const x in dependencyRootInfo) {
     const versionDependecyMap = new Map<semver.SemVer, PackageDepndecyList>();
-    // 確認するパッケージ
-    // プロジェクトから直接参照されている場合，パッケージそのもの．そうでない場合，ルートのパッケージを確認．
     const checkPackage =
       dependencyRootInfo[x].bigParent.name === "#ROOT"
         ? { name: dependencyRootInfo[x].name, version: dependencyRootInfo[x].version }
         : dependencyRootInfo[x].bigParent;
     const currentVersion = semver.parse(checkPackage.version);
     const packageVersions = (await getPackageDependencies([checkPackage.name])).get(checkPackage.name);
-    if (!packageVersions || !currentVersion) {
-      throw new Error("Package info does not found");
-    }
+    if (!packageVersions || !currentVersion) throw new Error("Package info does not found");
     // 現在のバージョンの依存関係グラフを取得する
     const currentVersionDepndecyList = await getDependecies(checkPackage.name, currentVersion);
     versionDependecyMap.set(currentVersion, currentVersionDepndecyList);
@@ -178,22 +208,36 @@ const searchNonConfilictVersion = async (
       ? Array.from(packageVersions.keys())
       : Array.from(packageVersions.keys()).filter(v => semver.gt(v, currentVersion));
     // バージョンが上げられる場合にどういう依存関係のグラフを辿るかを保存する
-    for (let v of toCheckVersion) {
+    for (const v of toCheckVersion) {
       const depndecyList = await getDependecies(checkPackage.name, v);
       versionDependecyMap.set(v, depndecyList);
     }
     conflictCausesVersions[checkPackage.name] = versionDependecyMap;
   }
   // conflictCausesVersionsからそれぞれ全部の組み合わせを試す
+  const conflictCauseNames: Array<string> = Array.from(Object.keys(conflictCausesVersions));
+  const checkVersion = (
+    potentiality: { [name: string]: Map<semver.SemVer, PackageDepndecyList> },
+    dependencyListArray: PackageDepndecyList[]
+  ): void => {
+    // 総当りをするために再帰する
+    if (dependencyListArray.length === conflictCauseNames.length) {
+      checkConflicts(name, dependencyListArray);
+    } else {
+      const t = conflictCausesVersions[conflictCauseNames[dependencyListArray.length]];
+      Array.from(t.values()).forEach(v => {
+        checkVersion(potentiality, [...dependencyListArray, v]);
+      });
+    }
+  };
+  checkVersion(conflictCausesVersions, []);
 };
 
-const solvableConfilts = getSolvableConflicts(getConfilct(getRealLogicalTree(getLogicTree())));
-
-// console.log(solvableConfilts);
-//console.log(util.inspect(solvableConfilts, false, null));
-
-for (let x in solvableConfilts) {
-  searchNonConfilictVersion(x, solvableConfilts[x]);
-}
-
-//console.log(util.inspect(getSolvableConflicts(getConfilct(getRealLogicalTree(getLogicTree()))), false, null));
+/* eslint-disable */
+(async () => {
+  const solvableConfilts = getSolvableConflicts(getConfilct(getRealLogicalTree(getLogicTree(process.argv[2] || ""))));
+  for (const x in solvableConfilts) {
+    await searchNonConfilictVersion(x, solvableConfilts[x]);
+  }
+})();
+/* eslint-enable */
