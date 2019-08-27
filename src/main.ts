@@ -155,18 +155,15 @@ const getDependecies = async (name: string, version: semver.SemVer): Promise<Pac
 
 const checkConflicts = (target: string, gathering: PackageDepndecyList[]): void => {
   const packages: { [name: string]: Array<string> } = {};
-  gathering
-    .map(v => v.depndecies)
-    .forEach(v =>
-      Array.from(v.values()).forEach(d => {
-        if (packages[d.name]) {
-          packages[d.name].push(d.version);
-        } else {
-          packages[d.name] = [d.version];
-        }
-      })
-    );
-
+  gathering.forEach(v =>
+    Array.from(v.depndecies.values()).forEach(d => {
+      if (packages[d.name]) {
+        packages[d.name].push(d.version);
+      } else {
+        packages[d.name] = [d.version];
+      }
+    })
+  );
   for (const x in packages) {
     packages[x] = uniq(packages[x]);
   }
@@ -199,16 +196,17 @@ const searchNonConfilictVersion = async (
         ? { name: dependencyRootInfo[x].name, version: dependencyRootInfo[x].version }
         : dependencyRootInfo[x].bigParent;
     const currentVersion = semver.parse(checkPackage.version);
-    const packageVersions = (await getPackageDependencies([checkPackage.name])).get(checkPackage.name);
-    if (!packageVersions || !currentVersion) throw new Error("Package info does not found");
+    if (!currentVersion) throw new Error("Package info does not found");
     // 現在のバージョンの依存関係グラフを取得する
-    const currentVersionDepndecyList = await getDependecies(checkPackage.name, currentVersion);
-    versionDependecyMap.set(currentVersion, currentVersionDepndecyList);
-    const toCheckVersion = allowDowngrade
+    versionDependecyMap.set(currentVersion, await getDependecies(checkPackage.name, currentVersion));
+
+    const packageVersions = (await getPackageDependencies([checkPackage.name])).get(checkPackage.name);
+    if (!packageVersions) throw new Error("failed get package version info");
+    const shouldCheckVersions = allowDowngrade
       ? Array.from(packageVersions.keys())
       : Array.from(packageVersions.keys()).filter(v => semver.gt(v, currentVersion));
-    // バージョンが上げられる場合にどういう依存関係のグラフを辿るかを保存する
-    for (const v of toCheckVersion) {
+
+    for (const v of shouldCheckVersions) {
       const depndecyList = await getDependecies(checkPackage.name, v);
       versionDependecyMap.set(v, depndecyList);
     }
@@ -220,9 +218,10 @@ const searchNonConfilictVersion = async (
     potentiality: { [name: string]: Map<semver.SemVer, PackageDepndecyList> },
     dependencyListArray: PackageDepndecyList[]
   ): void => {
-    // 総当りをするために再帰する
+    // すべての衝突の原因のパッケージが入っていればどうにかなる
     if (dependencyListArray.length === conflictCauseNames.length) {
       checkConflicts(name, dependencyListArray);
+      // 総当りをするために再帰する
     } else {
       const t = conflictCausesVersions[conflictCauseNames[dependencyListArray.length]];
       Array.from(t.values()).forEach(v => {
