@@ -14,3 +14,7 @@ typescript library update suggester in npm.
 4. そのライブラリをアップデートすると依存先のライブラリが更新されるかどうかを確認
 5. 更新される場合、その更新が自動的に可能かどうかを確認
 6. suggestする
+
+# やること
+
+* logicTreeじゃなくてPackageDepndecyListから依存関係のコンフリクトが出力できるようにする
