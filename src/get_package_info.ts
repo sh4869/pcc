@@ -5,6 +5,7 @@ import semver, { SemVer } from "semver";
 import { PackageDependenciesInfo, Dependencies } from "./type";
 
 import packagejson from "package-json";
+import { PackageRepository } from "./package_repository";
 
 interface PkgData {
   versions: { [key: string]: packagejson.AbbreviatedVersion };
@@ -56,3 +57,46 @@ export const getPackageDependencies = async (packages: string[]): Promise<Map<st
   }
   return map;
 };
+
+export class NpmPackageRepository implements PackageRepository {
+  private cache: PkgDataInfo;
+  constructor() {
+    this.cache = {};
+  }
+
+  private async fetchPackageInfo(opts: pkginfo.Options): Promise<PkgDataInfo> {
+    const newOpts = { packages: opts.packages.filter(v => !Object.keys(cache).includes(v)) };
+    if (newOpts.packages.length > 0) {
+      const pkginfoPromise = util.promisify(pkginfo);
+      const newData = (await pkginfoPromise(newOpts)).data as PkgDataInfo;
+      // キャッシュを保存
+      for (const i in newData) {
+        this.cache[i] = newData[i];
+      }
+    }
+    const result = {};
+    // キャッシュからデータを取り出し
+    // 非効率的だけど大した数にはならないので
+    opts.packages.forEach(v => {
+      result[v] = this.cache[v];
+    });
+    return result as PkgDataInfo;
+  }
+  public async get(names: string[]): Promise<Map<string, PackageDependenciesInfo>> {
+    const pkgdatainfo = await getPackageInfo({ packages: names });
+    const map = new Map<string, PackageDependenciesInfo>();
+    for (const name in pkgdatainfo) {
+      const xmap = new Map<SemVer, Dependencies>();
+      for (const ver in pkgdatainfo[name].versions) {
+        const version = semver.parse(ver);
+        if (version) {
+          xmap.set(version, pkgdatainfo[name].versions[ver].dependencies || {});
+        } else {
+          throw new Error(`Semantic Version Parse Error: ${name} - ${ver}`);
+        }
+      }
+      map.set(name, xmap);
+    }
+    return map;
+  }
+}

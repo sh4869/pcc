@@ -153,7 +153,7 @@ const getDependecies = async (name: string, version: semver.SemVer): Promise<Pac
   };
 };
 
-const checkConflicts = (target: string, gathering: PackageDepndecyList[]): void => {
+const isSolvedConfilicts = (target: string, gathering: PackageDepndecyList[]): boolean => {
   const packages: { [name: string]: Array<string> } = {};
   gathering.forEach(v =>
     Array.from(v.depndecies.values()).forEach(d => {
@@ -168,10 +168,9 @@ const checkConflicts = (target: string, gathering: PackageDepndecyList[]): void 
     packages[x] = uniq(packages[x]);
   }
   if (packages[target].length == 1) {
-    console.log(`resolve ${target} conflict use`);
-    gathering.forEach(v => {
-      console.log(`* ${v.package.name} - ${v.package.version}`);
-    });
+    return true;
+  } else {
+    return false;
   }
 };
 
@@ -220,7 +219,7 @@ const searchNonConfilictVersion = async (
   ): void => {
     // すべての衝突の原因のパッケージが入っていればどうにかなる
     if (dependencyListArray.length === conflictCauseNames.length) {
-      checkConflicts(name, dependencyListArray);
+      isSolvedConfilicts(name, dependencyListArray);
       // 総当りをするために再帰する
     } else {
       const t = conflictCausesVersions[conflictCauseNames[dependencyListArray.length]];
