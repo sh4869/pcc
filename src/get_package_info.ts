@@ -4,7 +4,7 @@ import util = require("util");
 import semver, { SemVer } from "semver";
 import { PackageDependenciesInfo, Dependencies } from "./type";
 
-import packagejson from "package-json";
+import packagejson = require("package-json");
 import { PackageRepository } from "./package_repository";
 
 interface PkgData {
@@ -58,6 +58,9 @@ export const getPackageDependencies = async (packages: string[]): Promise<Map<st
   return map;
 };
 
+/**
+ * Npm PackageRepository Implements
+ */
 export class NpmPackageRepository implements PackageRepository {
   private cache: PkgDataInfo;
   constructor() {
@@ -82,8 +85,9 @@ export class NpmPackageRepository implements PackageRepository {
     });
     return result as PkgDataInfo;
   }
+
   public async get(names: string[]): Promise<Map<string, PackageDependenciesInfo>> {
-    const pkgdatainfo = await getPackageInfo({ packages: names });
+    const pkgdatainfo = await this.fetchPackageInfo({ packages: names });
     const map = new Map<string, PackageDependenciesInfo>();
     for (const name in pkgdatainfo) {
       const xmap = new Map<SemVer, Dependencies>();
