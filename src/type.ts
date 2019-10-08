@@ -76,7 +76,7 @@ export interface DependencyRoot {
  */
 export interface ConflictPackage {
   packageName: string;
-  versions: Map<SemVer, DependencyRoot[]>;
+  versions: { version: SemVer; depenedecyRoot: Package[] }[];
 }
 /**
  * Conflictの存在をチェックしたあとのデータ

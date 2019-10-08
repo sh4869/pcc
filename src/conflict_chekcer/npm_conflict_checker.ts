@@ -47,16 +47,8 @@ export class NpmConflictChecker implements ConflictChecker {
     const result: ConflictPackages = [];
     const list = this.filterConflitPackage(deps);
     for (const x in list) {
-      const versions: Map<SemVer, DependencyRoot[]> = new Map<SemVer, DependencyRoot[]>();
-      deps[x].forEach(v => {
-        const d = versions.get(v.version);
-        if (d) {
-          d.push({ root: v.dependency });
-          versions.set(v.version, d);
-        } else {
-          versions.set(v.version, [{ root: v.dependency }]);
-        }
-      });
+      const versions: { version: SemVer; depenedecyRoot: Package[] }[] = [];
+      deps[x].forEach(v => versions.push({ version: v.version, depenedecyRoot: v.dependency }));
       result.push({ packageName: x, versions: versions });
     }
     return result;
