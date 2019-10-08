@@ -45,9 +45,7 @@ const getConfilct = (dependencis: Map<string, LogicalTree>): ConflictInfo => {
       });
       logicalTree.dependencies.forEach(v => {
         const newBigParent =
-          bigParent.name === "#ROOT"
-            ? { name: logicalTree.name, version: logicalTree.version }
-            : bigParent;
+          bigParent.name === "#ROOT" ? { name: logicalTree.name, version: logicalTree.version } : bigParent;
         addVersion(v, parentArray, newBigParent);
       });
     }
@@ -82,13 +80,8 @@ const getSolvableConflicts = (conflictinfo: ConflictInfo): ConflictInfo => {
 };
 
 // 条件式とバージョンの配列からその条件式に当てはまる最新のバージョンを取得する
-const getValidLatestVersion = (
-  condition: string,
-  versions: semver.SemVer[]
-): semver.SemVer => {
-  return versions
-    .filter(v => semver.satisfies(v.version, condition))
-    .sort((a, b) => (semver.gt(a, b) ? -1 : 1))[0];
+const getValidLatestVersion = (condition: string, versions: semver.SemVer[]): semver.SemVer => {
+  return versions.filter(v => semver.satisfies(v.version, condition)).sort((a, b) => (semver.gt(a, b) ? -1 : 1))[0];
 };
 
 /**
@@ -96,10 +89,7 @@ const getValidLatestVersion = (
  * @param name パッケージ名
  * @param version バージョン番号
  */
-const getDependecies = async (
-  name: string,
-  version: semver.SemVer
-): Promise<PackageDepndecyList> => {
+const getDependecies = async (name: string, version: semver.SemVer): Promise<PackageDepndecyList> => {
   const dependecyList: Set<SimplePackageInfo> = new Set();
   const dependecyMap: Map<string, SimplePackageInfo> = new Map();
   const addDependency = async (
@@ -115,20 +105,12 @@ const getDependecies = async (
       const verisonDependecy = dependecy.get(version);
       if (verisonDependecy) {
         const dependecyNames = Array.from(Object.keys(verisonDependecy));
-        const packageDependecyInfo = await getPackageDependencies(
-          dependecyNames
-        );
+        const packageDependecyInfo = await getPackageDependencies(dependecyNames);
         for (const name in verisonDependecy) {
           const versions = packageDependecyInfo.get(name);
           if (versions) {
-            const targetVersion = getValidLatestVersion(
-              verisonDependecy[name],
-              Array.from(versions.keys())
-            );
-            await addDependency(
-              { name: name, version: targetVersion.version },
-              versions
-            );
+            const targetVersion = getValidLatestVersion(verisonDependecy[name], Array.from(versions.keys()));
+            await addDependency({ name: name, version: targetVersion.version }, versions);
           }
         }
       }
@@ -136,10 +118,7 @@ const getDependecies = async (
   };
   const packageDependecy = (await getPackageDependencies([name])).get(name);
   if (packageDependecy) {
-    await addDependency(
-      { name: name, version: version.version },
-      packageDependecy
-    );
+    await addDependency({ name: name, version: version.version }, packageDependecy);
   }
   return {
     package: { name: name, version: version.version },
@@ -147,10 +126,7 @@ const getDependecies = async (
   };
 };
 
-const isSolvedConfilicts = (
-  target: string,
-  gathering: PackageDepndecyList[]
-): boolean => {
+const isSolvedConfilicts = (target: string, gathering: PackageDepndecyList[]): boolean => {
   const packages: { [name: string]: Array<string> } = {};
   gathering.forEach(v =>
     Array.from(v.depndecies.values()).forEach(d => {
@@ -201,16 +177,12 @@ const searchNonConfilictVersion = async (
 
     const currentVersion = semver.parse(targetPackage.version);
     if (!currentVersion) throw new Error("Package info does not found");
-    const packageVersions = (await getPackageDependencies([
-      targetPackage.name
-    ])).get(targetPackage.name);
+    const packageVersions = (await getPackageDependencies([targetPackage.name])).get(targetPackage.name);
     if (!packageVersions) throw new Error("failed get package version info");
 
     const checkVersions = allowDowngrade
       ? Array.from(packageVersions.keys())
-      : Array.from(packageVersions.keys()).filter(v =>
-          semver.gte(v, currentVersion)
-        );
+      : Array.from(packageVersions.keys()).filter(v => semver.gte(v, currentVersion));
     const versionDependecyMap = new Map<semver.SemVer, PackageDepndecyList>();
     for (const v of checkVersions) {
       const depndecyList = await getDependecies(targetPackage.name, v);
@@ -219,9 +191,7 @@ const searchNonConfilictVersion = async (
     packageDepndencyMap[targetPackage.name] = versionDependecyMap;
   }
 
-  const conflictCauseNames: Array<string> = Array.from(
-    Object.keys(packageDepndencyMap)
-  );
+  const conflictCauseNames: Array<string> = Array.from(Object.keys(packageDepndencyMap));
   const checkVersion = (
     potentiality: { [name: string]: Map<semver.SemVer, PackageDepndecyList> },
     dependencyListArray: PackageDepndecyList[]
@@ -242,9 +212,7 @@ const searchNonConfilictVersion = async (
 
 /* eslint-disable */
 (async () => {
-  const solvableConfilts = getSolvableConflicts(
-    getConfilct(getLogicTree(process.argv[2] || ""))
-  );
+  const solvableConfilts = getSolvableConflicts(getConfilct(getLogicTree(process.argv[2] || "")));
   for (const x in solvableConfilts) {
     await searchNonConfilictVersion(x, solvableConfilts[x]);
   }

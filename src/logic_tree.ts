@@ -17,9 +17,7 @@ const getJsondata = (path: string): any => {
  * 依存関係から必要なものだけを取り出す（dev onlyとかはいらないので）
  * @param logicalTree 依存関係のtree
  */
-const getRealLogicalTree = (
-  logicalTree: LogicalTree
-): Map<string, LogicalTree> => {
+const getRealLogicalTree = (logicalTree: LogicalTree): Map<string, LogicalTree> => {
   const depens = logicalTree.dependencies;
   // optional と devなdependenciesを除く
   const realDep = new Map<string, LogicalTree>();
