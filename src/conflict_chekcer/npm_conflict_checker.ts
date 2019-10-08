@@ -1,4 +1,4 @@
-import { ConflictChecker, LogicalTree, ConflictPackages, Package, ROOT_PROJECT, DependencyRoot } from "../type";
+import { ConflictChecker, LogicalTree, ConflictPackages, Package, ROOT_PROJECT } from "../type";
 import { SemVer } from "semver";
 
 type VersionList = {
@@ -12,6 +12,10 @@ export class NpmConflictChecker implements ConflictChecker {
       Buffer.from(logicalTree.version, "utf-8").toString("base64");
     if (!check.has(key)) {
       check.add(key);
+      dependency.push({
+        name: logicalTree.name,
+        version: new SemVer(logicalTree.version)
+      });
       const dep = {
         name: logicalTree.name,
         version: new SemVer(logicalTree.version),
@@ -19,10 +23,6 @@ export class NpmConflictChecker implements ConflictChecker {
       };
       if (!list[logicalTree.name]) list[logicalTree.name] = [dep];
       else list[logicalTree.name].push(dep);
-      dependency.push({
-        name: logicalTree.name,
-        version: new SemVer(logicalTree.version)
-      });
       logicalTree.dependencies.forEach(v => {
         this.addVersion(v, dependency, list, check);
       });
