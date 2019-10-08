@@ -29,16 +29,6 @@ export class NpmConflictChecker implements ConflictChecker {
     }
   }
 
-  private filterConflitPackage(list: VersionList): VersionList {
-    for (const x in list) {
-      const targetPackage = list[x];
-      const firstVerson = targetPackage[0].version;
-      if (!targetPackage.every(v => v.version.version === firstVerson.version)) break;
-      delete list[x];
-    }
-    return list;
-  }
-
   checkConflict(logicalTree: Map<string, LogicalTree>): ConflictPackages {
     const list: VersionList = {};
     const check = new Set<string>();

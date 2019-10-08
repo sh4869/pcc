@@ -17,7 +17,7 @@ export class NpmConflictSolver implements ConflictSolver {
     this.packageRepository = repository;
   }
 
-  private async getDependencies(name: string, version: semver.SemVer): Promise<PackageDepndecyList> {
+  private async getDependencies(pack: Package): Promise<PackageDepndecyList> {
     const dependecyList: Set<Package> = new Set();
     const dependecyMap: Map<string, Package> = new Map();
     const addDependency = async (
@@ -27,7 +27,7 @@ export class NpmConflictSolver implements ConflictSolver {
       if (!dependecyMap.has(JSON.stringify(packageInfo))) {
         dependecyMap.set(JSON.stringify(packageInfo), packageInfo);
         dependecyList.add(packageInfo);
-        // 当てはまるバージョンの依存関係を取得する
+        // 当てはまるバージョンの依存関係を取得する(Objectなので適当にgetすると失敗するため)
         const verisonDependecy = dependecy.get(
           Array.from(dependecy.keys()).filter(v => v.version === packageInfo.version.version)[0]
         );
@@ -44,14 +44,9 @@ export class NpmConflictSolver implements ConflictSolver {
         }
       }
     };
-    const packageDependecy = (await this.packageRepository.get([name])).get(name);
-    if (packageDependecy) {
-      await addDependency({ name: name, version: version }, packageDependecy);
-    }
-    return {
-      package: { name: name, version: version },
-      depndecies: dependecyList
-    };
+    const packageDependecy = (await this.packageRepository.get([pack.name])).get(pack.name);
+    if (packageDependecy) await addDependency(pack, packageDependecy);
+    return { package: pack, depndecies: dependecyList };
   }
 
   private isSolvedConfilicts(
@@ -80,15 +75,14 @@ export class NpmConflictSolver implements ConflictSolver {
     } = {};
     for (const causePackage of conflict.versions) {
       const targetPackage = causePackage.depenedecyRoot[1];
+      // どうアップデートするべきかを表示するために必要
       beforeVersions[targetPackage.name] = targetPackage;
-      const currentVersion = semver.parse(targetPackage.version);
-      if (!currentVersion) throw new Error("Package info does not found");
       const packageVersions = (await this.packageRepository.get([targetPackage.name])).get(targetPackage.name);
       if (!packageVersions) throw new Error("failed get package version info");
-      const checkVersions = Array.from(packageVersions.keys()).filter(v => semver.gte(v, currentVersion));
+      const checkVersions = Array.from(packageVersions.keys()).filter(v => semver.gte(v, targetPackage.version));
       const versionDependecyMap = new Map<semver.SemVer, PackageDepndecyList>();
       for (const v of checkVersions) {
-        const depndecyList = await this.getDependencies(targetPackage.name, v);
+        const depndecyList = await this.getDependencies({ name: targetPackage.name, version: v });
         versionDependecyMap.set(v, depndecyList);
       }
       packageDepndencyMap[targetPackage.name] = versionDependecyMap;
