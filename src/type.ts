@@ -56,35 +56,38 @@ export interface LogicalTree {
   requiredBy?: Set<LogicalTree>;
 }
 
-interface Package {
+export interface Package {
   name: string;
   version: SemVer;
-  // optional
-  depndency: Package[];
 }
 
-interface DependencyRoot {
+export const ROOT_PROJECT: Package = {
+  name: "#ROOT_PROJECT",
+  version: new SemVer("0.0.0")
+};
+
+export interface DependencyRoot {
   // プロジェクトから見て上から下に下がっていく
   root: Package[];
 }
 
-interface ConflictPackage {
+/**
+ * 衝突したパッケージとその原因
+ */
+export interface ConflictPackage {
   packageName: string;
   versions: Map<SemVer, DependencyRoot[]>;
-  isInsoluble: boolean;
 }
 /**
  * Conflictの存在をチェックしたあとのデータ
  */
-export interface ConflictCheckResult {
-  confilicts: ConflictPackage[];
-}
+export type ConflictPackages = ConflictPackage[];
 
 /**
  * Conflictをチェックする機構
  */
 export interface ConflictChecker {
-  checkConflict: (logicalTree: Map<string, LogicalTree>) => ConflictCheckResult;
+  checkConflict: (logicalTree: Map<string, LogicalTree>) => ConflictPackages;
 }
 
 interface PackageUpdateInfo {
@@ -104,9 +107,9 @@ export interface NoConflictSituation {
  */
 export interface ConflictSolver {
   /**
-   *
+   * conflict -> NoConflictSisutation
    */
-  solveConflict: (conflict: ConflictCheckResult) => NoConflictSituation[];
+  solveConflict: (conflict: ConflictPackage) => NoConflictSituation[];
 }
 
 interface UpdateableCheckResult {
