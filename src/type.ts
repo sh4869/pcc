@@ -90,7 +90,7 @@ export interface ConflictChecker {
   checkConflict: (logicalTree: Map<string, LogicalTree>) => ConflictPackages;
 }
 
-interface PackageUpdateInfo {
+export interface PackageUpdateInfo {
   before: Package;
   // もし更新がない場合はundefinedになる
   after?: Package;
@@ -109,7 +109,7 @@ export interface ConflictSolver {
   /**
    * conflict -> NoConflictSisutation
    */
-  solveConflict: (conflict: ConflictPackage) => NoConflictSituation[];
+  solveConflict: (conflict: ConflictPackage) => Promise<NoConflictSituation[]>;
 }
 
 interface UpdateableCheckResult {
