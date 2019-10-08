@@ -1,7 +1,6 @@
 import { ConflictSolver, ConflictPackage, NoConflictSituation, Package, PackageUpdateInfo } from "../type";
 import semver, { SemVer } from "semver";
 import { PackageRepository } from "../package_repository";
-import { uniq } from "underscore";
 
 type PackageDepndecyList = {
   package: Package;
@@ -29,9 +28,9 @@ export class NpmConflictSolver implements ConflictSolver {
         dependecyMap.set(JSON.stringify(packageInfo), packageInfo);
         dependecyList.add(packageInfo);
         // 当てはまるバージョンの依存関係を取得する
-        const version = semver.parse(packageInfo.version);
-        if (!version) return;
-        const verisonDependecy = dependecy.get(version);
+        const verisonDependecy = dependecy.get(
+          Array.from(dependecy.keys()).filter(v => v.version === packageInfo.version.version)[0]
+        );
         if (verisonDependecy) {
           const dependecyNames = Array.from(Object.keys(verisonDependecy));
           const packageDependecyInfo = await this.packageRepository.get(dependecyNames);
@@ -46,7 +45,9 @@ export class NpmConflictSolver implements ConflictSolver {
       }
     };
     const packageDependecy = (await this.packageRepository.get([name])).get(name);
-    if (packageDependecy) await addDependency({ name: name, version: version }, packageDependecy);
+    if (packageDependecy) {
+      await addDependency({ name: name, version: version }, packageDependecy);
+    }
     return {
       package: { name: name, version: version },
       depndecies: dependecyList
@@ -57,20 +58,19 @@ export class NpmConflictSolver implements ConflictSolver {
     target: string,
     gathering: PackageDepndecyList[]
   ): { result: boolean; versions: SemVer[] } {
-    const packages: { [name: string]: Array<SemVer> } = {};
-    gathering.forEach(v =>
+    const versionsString: string[] = [];
+    const versions: SemVer[] = [];
+    gathering.forEach(v => {
       Array.from(v.depndecies.values()).forEach(d => {
-        if (packages[d.name]) {
-          packages[d.name].push(d.version);
-        } else {
-          packages[d.name] = [d.version];
+        if (d.name === target) {
+          if (!versionsString.find(v => v === d.version.version)) {
+            versions.push(d.version);
+            versionsString.push(d.version.version);
+          }
         }
-      })
-    );
-    for (const x in packages) {
-      packages[x] = uniq(packages[x]);
-    }
-    return { result: packages[target].length === 1, versions: packages[target] };
+      });
+    });
+    return { result: versions.length === 1, versions: versions };
   }
 
   async solveConflict(conflict: ConflictPackage): Promise<NoConflictSituation[]> {
@@ -100,9 +100,8 @@ export class NpmConflictSolver implements ConflictSolver {
       potentiality: { [name: string]: Map<semver.SemVer, PackageDepndecyList> },
       dependencyListArray: PackageDepndecyList[]
     ): void => {
-      // すべての衝突の原因のパッケージが入っていればどうにかなる
       if (dependencyListArray.length === conflictCauseNames.length) {
-        const result = this.isSolvedConfilicts(name, dependencyListArray);
+        const result = this.isSolvedConfilicts(conflict.packageName, dependencyListArray);
         if (result.result) {
           const updateTarget: PackageUpdateInfo[] = [];
           dependencyListArray.forEach(v =>

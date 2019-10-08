@@ -33,22 +33,24 @@ export class NpmConflictChecker implements ConflictChecker {
     for (const x in list) {
       const targetPackage = list[x];
       const firstVerson = targetPackage[0].version;
-      if (!targetPackage.every(v => v.version === firstVerson)) break;
+      if (!targetPackage.every(v => v.version.version === firstVerson.version)) break;
       delete list[x];
     }
     return list;
   }
 
   checkConflict(logicalTree: Map<string, LogicalTree>): ConflictPackages {
-    const deps: VersionList = {};
+    const list: VersionList = {};
     const check = new Set<string>();
-    logicalTree.forEach(v => this.addVersion(v, [ROOT_PROJECT], deps, check));
+    logicalTree.forEach(v => this.addVersion(v, [ROOT_PROJECT], list, check));
     // すべてのバージョンが同じバージョンであれば無視
     const result: ConflictPackages = [];
-    const list = this.filterConflitPackage(deps);
     for (const x in list) {
+      const targetPackage = list[x];
+      const firstVerson = targetPackage[0].version;
+      if (targetPackage.length === 1 || targetPackage.every(v => v.version.version === firstVerson.version)) continue;
       const versions: { version: SemVer; depenedecyRoot: Package[] }[] = [];
-      deps[x].forEach(v => versions.push({ version: v.version, depenedecyRoot: v.dependency }));
+      targetPackage.forEach(v => versions.push({ version: v.version, depenedecyRoot: v.dependency }));
       result.push({ packageName: x, versions: versions });
     }
     return result;
