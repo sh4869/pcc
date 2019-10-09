@@ -62,7 +62,7 @@ export interface ConflictChecker {
 export interface PackageUpdateInfo {
   before: Package;
   // もし更新がない場合はundefinedになる
-  after?: Package;
+  after: Package;
 }
 
 export interface NoConflictSituation {
