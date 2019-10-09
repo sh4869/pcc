@@ -1,20 +1,54 @@
-# update-suggester
+# pcc
 
-typescript library update suggester in npm.
+> Package Conflict Checker in npm
 
-## candidate for name
+## Command
 
-* Douage(胴上げ)
+### Check
 
-# logic
+```bash
+$ pcc check .
+find 3 conflicts package
+- get-stream
+    5.1.0
+      package-json@6.5.0
+      +-got@9.6.0
+        +-cacheable-request@6.1.0
+          +-get-stream@5.1.0
+    4.1.0
+      package-json@6.5.0
+      +-got@9.6.0
+        +-get-stream@4.1.0
+- lowercase-keys
+    2.0.0
+      package-json@6.5.0
+      +-got@9.6.0
+        +-cacheable-request@6.1.0
+          +-lowercase-keys@2.0.0
+    1.0.1
+      package-json@6.5.0
+      +-got@9.6.0
+        +-cacheable-request@6.1.0
+          +-responselike@1.0.2
+            +-lowercase-keys@1.0.1
+- semver
+    6.3.0
+      package-json@6.5.0
+      +-semver@6.3.0
+    6.0.0
+      semver@6.0.0
+```
 
-1. ライブラリの依存パッケージを取得
-2. 依存関係の衝突が発生するかを確認
-3. 衝突が発生した場合、古い方を利用している利用元のライブラリを確認（複数コンフリクトしている場合はとりあえずおいておく）
-4. そのライブラリをアップデートすると依存先のライブラリが更新されるかどうかを確認
-5. 更新される場合、その更新が自動的に可能かどうかを確認
-6. suggestする
+### solve
 
-# やること
-
-* logicTreeじゃなくてPackageDepndecyListから依存関係のコンフリクトが出力できるようにする
+```
+$ pcc solve .
+- semver
+    semver@6.3.0
+      package-json@6.5.0 -> package-json@6.5.0
+      semver@6.0.0 -> semver@6.3.0
+- get-stream
+    can't solve get-stream conflict :(
+- lowercase-keys
+    can't solve lowercase-keys conflict :(
+```
