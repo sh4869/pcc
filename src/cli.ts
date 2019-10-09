@@ -40,16 +40,18 @@ const printConflitResult = (conflictResult: ConflictPackage[]): void => {
 
 const printNoConflictSituation = (pack: ConflictPackage, situations: NoConflictSituation[]): void => {
   if (situations.length === 0) {
-    console.log(`can't solve ${pack.packageName} conflict :(`);
+    console.log(chalk.default.red(`- ${pack.packageName}`));
+    console.log(`    can't solve ${pack.packageName} conflict :(`);
   } else {
+    console.log(chalk.default.green(`- ${pack.packageName}`));
     situations.forEach(situation => {
       console.log(
-        `${chalk.default.bold(situation.targetPackage)}@${chalk.default.underline(situation.finalVersion.version)}`
+        `    ${chalk.default.bold(situation.targetPackage)}@${chalk.default.underline(situation.finalVersion.version)}`
       );
       situation.updateTargets.forEach(v => {
         const disp =
           v.before.version.version === v.after.version.version ? (str: string): string => str : chalk.default.bold;
-        console.log(`  ${v.before.name}@${v.before.version} -> ${disp(`${v.after.name}@${v.after.version}`)}`);
+        console.log(`      ${v.before.name}@${v.before.version} -> ${disp(`${v.after.name}@${v.after.version}`)}`);
       });
     });
   }
