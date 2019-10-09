@@ -74,7 +74,7 @@ export class NpmConflictSolver implements ConflictSolver {
       [name: string]: Map<SemVer, PackageDepndecyList>;
     } = {};
     for (const causePackage of conflict.versions) {
-      const targetPackage = causePackage.depenedecyRoot[1];
+      const targetPackage = causePackage.depenedecyRoot[0];
       // どうアップデートするべきかを表示するために必要
       beforeVersions[targetPackage.name] = targetPackage;
       const packageVersions = (await this.packageRepository.get([targetPackage.name])).get(targetPackage.name);

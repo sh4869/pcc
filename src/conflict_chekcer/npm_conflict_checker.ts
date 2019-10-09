@@ -1,4 +1,4 @@
-import { ConflictChecker, LogicalTree, ConflictPackages, Package, ROOT_PROJECT } from "../type";
+import { ConflictChecker, LogicalTree, ConflictPackages, Package } from "../type";
 import { SemVer } from "semver";
 
 type VersionList = {
@@ -12,19 +12,19 @@ export class NpmConflictChecker implements ConflictChecker {
       Buffer.from(logicalTree.version, "utf-8").toString("base64");
     if (!check.has(key)) {
       check.add(key);
-      dependency.push({
-        name: logicalTree.name,
-        version: new SemVer(logicalTree.version)
-      });
+      const newDependency = Object.assign(
+        [],
+        dependency.concat({ name: logicalTree.name, version: new SemVer(logicalTree.version) })
+      );
       const dep = {
         name: logicalTree.name,
         version: new SemVer(logicalTree.version),
-        dependency
+        dependency: newDependency
       };
       if (!list[logicalTree.name]) list[logicalTree.name] = [dep];
       else list[logicalTree.name].push(dep);
       logicalTree.dependencies.forEach(v => {
-        this.addVersion(v, dependency, list, check);
+        this.addVersion(v, newDependency, list, check);
       });
     }
   }
@@ -32,7 +32,7 @@ export class NpmConflictChecker implements ConflictChecker {
   checkConflict(logicalTree: Map<string, LogicalTree>): ConflictPackages {
     const list: VersionList = {};
     const check = new Set<string>();
-    logicalTree.forEach(v => this.addVersion(v, [ROOT_PROJECT], list, check));
+    logicalTree.forEach(v => this.addVersion(v, [], list, check));
     // すべてのバージョンが同じバージョンであれば無視
     const result: ConflictPackages = [];
     for (const x in list) {
