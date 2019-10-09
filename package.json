@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/sh4869/update-suggester#readme",
   "dependencies": {
+    "chalk": "^2.4.2",
     "commander": "^2.12.2",
     "npm-api": "^1.0.0",
     "npm-logical-tree": "^1.2.1",
@@ -25,8 +26,7 @@
     "package-json": "^6.4.0",
     "read-package-json": "^2.1.0",
     "semver": "^6.0.1",
-    "typescript": "^3.4.5",
-    "underscore": "^1.9.1"
+    "typescript": "^3.4.5"
   },
   "devDependencies": {
     "@types/commander": "^2.12.2",
