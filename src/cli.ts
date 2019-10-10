@@ -6,7 +6,7 @@ import { NpmPackageRepository } from "./get_package_info";
 import { ConflictPackage, Package, NoConflictSituation } from "./type";
 import chalk = require("chalk");
 
-const pcc = new Command("pcc");
+const pcs = new Command("pcs");
 
 const printConflitResult = (conflictResult: ConflictPackage[]): void => {
   if (conflictResult.length > 0) {
@@ -57,9 +57,9 @@ const printNoConflictSituation = (pack: ConflictPackage, situations: NoConflictS
   }
 };
 
-pcc.version("0.1.0");
+pcs.version("0.1.0");
 
-pcc
+pcs
   .command("check")
   .description("check conflict in package")
   .action((dir, _) => {
@@ -67,7 +67,7 @@ pcc
     printConflitResult(result);
   });
 
-pcc
+pcs
   .command("solve")
   .description("find slove conflict situatuion")
   .action(async (dir, _) => {
@@ -78,4 +78,4 @@ pcc
     });
   });
 
-pcc.parse(process.argv);
+pcs.parse(process.argv);

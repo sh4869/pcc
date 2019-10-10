@@ -1,13 +1,13 @@
-# pcc
+# pcs
 
-> Package Conflict Checker in npm
+> Package Conflict Solver in npm
 
 ## Command
 
 ### Check
 
 ```bash
-$ pcc check .
+$ pcs check .
 find 3 conflicts package
 - get-stream
     5.1.0
@@ -42,7 +42,7 @@ find 3 conflicts package
 ### solve
 
 ```
-$ pcc solve .
+$ pcs solve .
 - semver
     semver@6.3.0
       package-json@6.5.0 -> package-json@6.5.0

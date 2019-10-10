@@ -1,7 +1,7 @@
 {
-  "name": "pcc",
+  "name": "pcs",
   "version": "0.0.1",
-  "description": "package conflict checker in npm",
+  "description": "package conflict solver in npm",
   "main": "dist/cli.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -9,14 +9,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sh4869/pcc.git"
+    "url": "git+https://github.com/sh4869/pcs.git"
   },
   "author": "sh4869",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/sh4869/pcc/issues"
+    "url": "https://github.com/sh4869/pcs/issues"
   },
-  "homepage": "https://github.com/sh4869/pcc#readme",
+  "homepage": "https://github.com/sh4869/pcs#readme",
   "dependencies": {
     "chalk": "^2.4.2",
     "commander": "^2.12.2",
