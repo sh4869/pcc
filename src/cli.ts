@@ -70,11 +70,13 @@ pcs
 pcs
   .command("solve")
   .description("find slove conflict situatuion")
-  .action(async (dir, _) => {
+  .action(async (dir, target) => {
     const result = new NpmConflictChecker().checkConflict(getLogicTree(dir as string));
     const solver = new NpmConflictSolver(new NpmPackageRepository());
     result.forEach(async v => {
-      printNoConflictSituation(v, await solver.solveConflict(v));
+      if (typeof target === "object" || (typeof target === "string" && target === v.packageName)) {
+        printNoConflictSituation(v, await solver.solveConflict(v));
+      }
     });
   });
 
