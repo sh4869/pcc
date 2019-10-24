@@ -94,19 +94,23 @@ export class NpmConflictSolver implements ConflictSolver {
       potentiality: { [name: string]: Map<semver.SemVer, PackageDepndecyList> },
       dependencyListArray: PackageDepndecyList[]
     ): void => {
-      if (dependencyListArray.length === conflictCauseNames.length) {
-        const result = this.isSolvedConfilicts(conflict.packageName, dependencyListArray);
-        if (result.result) {
-          const updateTarget: PackageUpdateInfo[] = [];
-          dependencyListArray.forEach(v =>
-            updateTarget.push({ before: beforeVersions[v.package.name], after: v.package })
-          );
-          noConflictSituation.push({
-            targetPackage: conflict.packageName,
-            finalVersion: result.versions[0],
-            updateTargets: updateTarget
-          });
-        }
+      if (dependencyListArray.length === conflictCauseNames.length - 1) {
+        const t = potentiality[conflictCauseNames[dependencyListArray.length]];
+        Array.from(t.values()).forEach(async last => {
+          const result = this.isSolvedConfilicts(conflict.packageName, [...dependencyListArray, last]);
+          if (result.result) {
+            const updateTarget: PackageUpdateInfo[] = [];
+            dependencyListArray.forEach(v =>
+              updateTarget.push({ before: beforeVersions[v.package.name], after: v.package })
+            );
+            updateTarget.push({ before: beforeVersions[last.package.name], after: last.package });
+            noConflictSituation.push({
+              targetPackage: conflict.packageName,
+              finalVersion: result.versions[0],
+              updateTargets: updateTarget
+            });
+          }
+        });
         // 総当りをするために再帰する
       } else {
         const t = potentiality[conflictCauseNames[dependencyListArray.length]];
