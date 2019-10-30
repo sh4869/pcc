@@ -19,8 +19,10 @@ export interface LogicalTree {
   optional: boolean;
   dev: boolean;
   bundled: boolean;
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   resolved: any;
   integrity: any;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   dependencies: Map<string, LogicalTree>;
   requiredBy?: Set<LogicalTree>;
 }

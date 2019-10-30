@@ -10,8 +10,9 @@ import { PackageRepository } from "./package_repository";
 interface PkgData {
   versions: { [key: string]: packagejson.AbbreviatedVersion };
 }
-
-const sleep: (number: number) => Promise<void> = msec => new Promise(resolve => setTimeout(resolve, msec));
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+const sleep: (number: number) => Promise<void> = msec => new Promise<void>(resolve => setTimeout(resolve, msec));
+/* eslint-enable @typescript-eslint/explicit-function-return-type */
 
 type PkgDataInfo = { [key: string]: PkgData };
 
