@@ -2,7 +2,7 @@ import pkginfo = require("npm-registry-package-info");
 
 import util = require("util");
 import semver, { SemVer } from "semver";
-import { PackageDependenciesInfo, Dependencies } from "./type";
+import { PackageDependenciesInfo, Dependencies } from "../type";
 
 import packagejson = require("package-json");
 import { PackageRepository } from "./package_repository";

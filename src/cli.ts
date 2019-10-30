@@ -1,8 +1,8 @@
 import { Command } from "commander";
-import { NpmConflictChecker } from "./conflict_chekcer/npm_conflict_checker";
-import { getLogicTree } from "./logic_tree";
-import { NpmConflictSolver } from "./conflict_solver/npm_conflict_solver";
-import { NpmPackageRepository } from "./get_package_info";
+import { NpmConflictChecker } from "./npm_conflict_checker";
+import { getLogicTree } from "./npm/logic_tree";
+import { NpmConflictSolver } from "./npm_conflict_solver";
+import { NpmPackageRepository } from "./npm/npm_package_repository";
 import { ConflictPackage, Package, NoConflictSituation } from "./type";
 import chalk = require("chalk");
 

@@ -1,4 +1,4 @@
-import { ConflictChecker, LogicalTree, ConflictPackages, Package } from "../type";
+import { ConflictChecker, LogicalTree, ConflictPackages, Package } from "./type";
 import { SemVer } from "semver";
 
 type VersionList = {

@@ -1,7 +1,7 @@
 import { join } from "path";
 import { readFileSync } from "fs";
 import logicTree = require("npm-logical-tree");
-import { LogicalTree } from "./type";
+import { LogicalTree } from "../type";
 
 /**
  * Jsonファイルを読み込んでparseする

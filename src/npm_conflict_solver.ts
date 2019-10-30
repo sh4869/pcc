@@ -1,6 +1,6 @@
-import { ConflictSolver, ConflictPackage, NoConflictSituation, Package, PackageUpdateInfo } from "../type";
+import { ConflictSolver, ConflictPackage, NoConflictSituation, Package, PackageUpdateInfo } from "./type";
 import semver, { SemVer } from "semver";
-import { PackageRepository } from "../package_repository";
+import { PackageRepository } from "./npm/package_repository";
 
 type PackageDepndecyList = {
   package: Package;

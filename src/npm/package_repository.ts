@@ -1,4 +1,4 @@
-import { PackageDependenciesInfo } from "./type";
+import { PackageDependenciesInfo } from "../type";
 
 /**
  * Packageの情報を取得します(Repositoryじゃない気がするけどまあいいや)
