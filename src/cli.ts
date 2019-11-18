@@ -6,8 +6,6 @@ import { NpmPackageRepository } from "./npm/npm_package_repository";
 import { ConflictPackage, Package, NoConflictSituation } from "./type";
 import chalk = require("chalk");
 
-const pcs = new Command("pcs");
-
 const printConflitResult = (conflictResult: ConflictPackage[]): void => {
   if (conflictResult.length > 0) {
     console.log(`find ${chalk.default.underline(conflictResult.length.toString())} conflicts package`);
@@ -57,7 +55,7 @@ const printNoConflictSituation = (pack: ConflictPackage, situations: NoConflictS
   }
 };
 
-pcs.version("0.1.0");
+const pcs = new Command("pcs").version("0.0.1");
 
 pcs
   .command("check")
