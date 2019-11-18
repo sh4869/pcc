@@ -43,13 +43,13 @@ export class NpmPackageRepository implements PackageRepository {
         return this.fetchPackageInfo(opts);
       }
     }
-    const result = {};
+    const result: PkgDataInfo = {};
     // キャッシュからデータを取り出し
     // 非効率的だけど大した数にはならないので
     opts.packages.forEach(v => {
       result[v] = this.cache[v];
     });
-    return result as PkgDataInfo;
+    return result;
   }
 
   public async get(names: string[]): Promise<Map<string, PackageDependenciesInfo>> {
