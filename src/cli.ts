@@ -60,10 +60,12 @@ const pcs = new Command("pcs").version("0.0.1");
 pcs
   .command("check")
   .description("check conflict in package")
+  /* eslint-disable */
   .action((dir, _) => {
     const result = new NpmConflictChecker().checkConflict(getLogicTree(dir as string));
     printConflitResult(result);
   });
+  /* eslint-enable */
 
 pcs
   .command("solve")
