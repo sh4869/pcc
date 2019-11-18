@@ -1,18 +1,19 @@
 {
-  "name": "pcs",
+  "name": "pcst",
   "version": "0.0.1",
   "description": "package conflict solver in npm",
   "main": "dist/cli.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node_modules/.bin/ts-node src/main.ts"
+    "start": "node_modules/.bin/ts-node src/main.ts",
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sh4869/pcs.git"
   },
   "author": "sh4869",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/sh4869/pcs/issues"
   },
