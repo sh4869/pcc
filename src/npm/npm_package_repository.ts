@@ -78,10 +78,10 @@ export class NpmPackageRepository implements PackageRepository {
   public async getDependencies(name: string): Promise<PackageDependenciesInfo> {
     const pkgdatainfo = (await this.fetchPackageInfo({ packages: [name] }))[name];
     const xmap = new Map<SemVer, Dependencies>();
-    for (const ver in pkgdatainfo[name].versions) {
+    for (const ver in pkgdatainfo.versions) {
       const version = semver.parse(ver);
       if (version) {
-        xmap.set(version, pkgdatainfo[name].versions[ver].dependencies || {});
+        xmap.set(version, pkgdatainfo.versions[ver].dependencies || {});
       } else {
         throw new Error(`Semantic Version Parse Error: ${name} - ${ver}`);
       }

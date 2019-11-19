@@ -5,6 +5,8 @@ import { NpmConflictSolver } from "./npm_conflict_solver";
 import { NpmPackageRepository } from "./npm/npm_package_repository";
 import { ConflictPackage, Package, NoConflictSituation } from "./type";
 import chalk = require("chalk");
+import { createLogicalExpresison } from "./sat/create_sat_text";
+import { inspect } from "util";
 
 const printConflitResult = (conflictResult: ConflictPackage[]): void => {
   if (conflictResult.length > 0) {
@@ -65,17 +67,19 @@ pcs
     const result = new NpmConflictChecker().checkConflict(getLogicTree(dir as string));
     printConflitResult(result);
   });
-  /* eslint-enable */
+/* eslint-enable */
 
 pcs
   .command("solve")
   .description("find slove conflict situatuion")
   .action(async (dir, target) => {
     const result = new NpmConflictChecker().checkConflict(getLogicTree(dir as string));
+
     const solver = new NpmConflictSolver(new NpmPackageRepository());
     result.forEach(async v => {
       if (typeof target === "object" || (typeof target === "string" && target === v.packageName)) {
-        printNoConflictSituation(v, await solver.solveConflict(v));
+        console.log(inspect(await createLogicalExpresison(v, [v.packageName]), false, null));
+        // printNoConflictSituation(v, await solver.solveConflict(v));
       }
     });
   });
