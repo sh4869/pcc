@@ -1,12 +1,25 @@
+import { SemVer } from "semver";
 import { PackageDependenciesInfo } from "../type";
 
 /**
- * Packageの情報を取得します(Repositoryじゃない気がするけどまあいいや)
+ * Get Package Info about dependency and version
  */
 export interface PackageRepository {
   /**
-   * 渡された引数からパッケージを取得します
-   * @names 取得したいPackageの情報
+   * get multiple package dependecy info for each versions
+   * @names package name array
    */
-  get: (names: string[]) => Promise<Map<string, PackageDependenciesInfo>>;
+  getMultiDependencies: (names: string[]) => Promise<Map<string, PackageDependenciesInfo>>;
+
+  /**
+   * get package dependecy info for each versions
+   * @name package name
+   */
+  getDependencies: (name: string) => Promise<PackageDependenciesInfo>;
+
+  /**
+   * get package All Version
+   * @name package name
+   */
+  getVersions: (name: string) => Promise<Array<SemVer>>;
 }
