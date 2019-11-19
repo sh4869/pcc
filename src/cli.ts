@@ -5,7 +5,7 @@ import { NpmConflictSolver } from "./npm_conflict_solver";
 import { NpmPackageRepository } from "./npm/npm_package_repository";
 import { ConflictPackage, Package, NoConflictSituation } from "./type";
 import chalk = require("chalk");
-import { createLogicalExpresison } from "./sat/create_sat_text";
+import { createLogicalExpresison, createCNF } from "./sat/solve_conflict_in_sat";
 import { inspect } from "util";
 
 const printConflitResult = (conflictResult: ConflictPackage[]): void => {
@@ -78,7 +78,7 @@ pcs
     const solver = new NpmConflictSolver(new NpmPackageRepository());
     result.forEach(async v => {
       if (typeof target === "object" || (typeof target === "string" && target === v.packageName)) {
-        console.log(inspect(await createLogicalExpresison(v, [v.packageName]), false, null));
+        console.log(await createCNF(v, [v.packageName]));
         // printNoConflictSituation(v, await solver.solveConflict(v));
       }
     });

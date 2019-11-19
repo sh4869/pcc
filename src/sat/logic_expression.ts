@@ -1,69 +1,59 @@
-export type Expression = Variable | Not | Or | And;
-
 export interface Variable {
   kind: "Variable";
   v: string;
 }
-
-export interface Not {
+export interface NotVariable {
   kind: "Not";
-  v: Expression;
+  v: Variable;
 }
 
-export interface Or {
-  kind: "Or";
-  v: Expression[];
-}
-
-export interface And {
-  kind: "And";
-  v: Expression[];
-}
-
-export const EMPTY: Variable = { kind: "Variable", v: "" };
-
-export const AND = (...v: Expression[]): Expression => {
-  const n: Expression[] = [];
-  for (const x of v) {
-    if (x !== EMPTY) n.push(x);
+export const OR = (a: Literal | Clause, b: Literal | Clause): Clause => {
+  if (a.kind === "Clause") {
+    if (b.kind === "Clause") {
+      return { kind: "Clause", v: a.v.concat(b.v) };
+    } else {
+      return { kind: "Clause", v: a.v.concat(b) };
+    }
+  } else if (b.kind === "Clause") {
+    return { kind: "Clause", v: b.v.concat(a) };
+  } else {
+    return { kind: "Clause", v: [a, b] };
   }
-  if (n.length === 0) return EMPTY;
-  if (n.length === 1) return n[0];
-  return { kind: "And", v: n };
 };
 
-export const OR = (...v: Expression[]): Expression => {
-  const n: Expression[] = [];
-  for (const x of v) {
-    if (x !== EMPTY) n.push(x);
-  }
-  if (n.length === 0) return EMPTY;
-  if (n.length === 1) return n[0];
-  return { kind: "Or", v: n };
-};
-
-export const NOT = (v: Expression): Expression => {
-  return v === EMPTY ? v : { v: v, kind: "Not" };
-};
+export const NOT = (v: Variable): NotVariable => ({ kind: "Not", v: v });
 
 /**
  * At Most one
  * @param variables
  */
-export const AMO = (variables: Expression[]): Expression => {
-  const x: Expression[] = [];
+export const AMO = (variables: Variable[]): Clause[] => {
+  const x: Clause[] = [];
   for (let i = 0; i < variables.length; i++) {
     for (let j = i + 1; j < variables.length; j++) {
-      const v = OR(NOT(variables[i]), NOT(variables[j]));
-      x.push(v);
+      x.push({ kind: "Clause", v: [NOT(variables[i]), NOT(variables[j])] });
     }
   }
-  return AND(...x);
+  return x;
 };
+
+export const ALO = (variables: Variable[]): Clause => ({ kind: "Clause", v: variables });
+
+// CNF
 /**
- * At Least One
- * @param variables
+ * リテラル => 変数かその否定
  */
-export const ALO = (variables: Expression[]): Expression => {
-  return OR(...variables);
+export type Literal = NotVariable | Variable;
+
+/**
+ * 節 => リテラルを OR で結んだもの
+ */
+export type Clause = {
+  kind: "Clause";
+  v: Literal[];
+};
+
+export type CNF = {
+  kind: "CNF";
+  v: Clause[];
 };
