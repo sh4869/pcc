@@ -5,8 +5,7 @@ import { NpmConflictSolver } from "./npm_conflict_solver";
 import { NpmPackageRepository } from "./npm/npm_package_repository";
 import { ConflictPackage, Package, NoConflictSituation } from "./type";
 import chalk = require("chalk");
-import { createLogicalExpresison, createCNF } from "./sat/solve_conflict_in_sat";
-import { inspect } from "util";
+import { SatConflictSolver } from "./sat/solve_conflict_in_sat";
 
 const printConflitResult = (conflictResult: ConflictPackage[]): void => {
   if (conflictResult.length > 0) {
@@ -74,12 +73,14 @@ pcs
   .description("find slove conflict situatuion")
   .action(async (dir, target) => {
     const result = new NpmConflictChecker().checkConflict(getLogicTree(dir as string));
-
-    const solver = new NpmConflictSolver(new NpmPackageRepository());
+    const solver1 = new SatConflictSolver();
+    const solver2 = new NpmConflictSolver(new NpmPackageRepository());
     result.forEach(async v => {
       if (typeof target === "object" || (typeof target === "string" && target === v.packageName)) {
-        console.log(await createCNF(v, [v.packageName]));
-        // printNoConflictSituation(v, await solver.solveConflict(v));
+        console.log(1);
+        printNoConflictSituation(v, await solver1.solveConflict(v));
+        console.log(2);
+        printNoConflictSituation(v, await solver2.solveConflict(v));
       }
     });
   });
