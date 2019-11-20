@@ -34,12 +34,12 @@ export const NOT = (v: Variable): NotVariable => ({ kind: "Not", v: v.v });
 export const OR = (a: Literal | Clause, b: Literal | Clause): Clause => {
   if (a.kind === "Clause") {
     if (b.kind === "Clause") {
-      return { kind: "Clause", v: a.v.concat(b.v) };
+      return { kind: "Clause", v: [...a.v, ...b.v] };
     } else {
-      return { kind: "Clause", v: a.v.concat(b) };
+      return { kind: "Clause", v: [...a.v, b] };
     }
   } else if (b.kind === "Clause") {
-    return { kind: "Clause", v: b.v.concat(a) };
+    return { kind: "Clause", v: [...b.v, a] };
   } else {
     return { kind: "Clause", v: [a, b] };
   }
