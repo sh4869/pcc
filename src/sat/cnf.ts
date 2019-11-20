@@ -2,10 +2,34 @@ export interface Variable {
   kind: "Variable";
   v: string;
 }
+
 export interface NotVariable {
   kind: "Not";
-  v: Variable;
+  v: string;
 }
+
+/**
+ * リテラル => 変数かその否定
+ */
+export type Literal = NotVariable | Variable;
+
+/**
+ * 節 => リテラルを OR で結んだもの
+ */
+export type Clause = {
+  kind: "Clause";
+  v: Literal[];
+};
+
+/**
+ * CNF: 節をANDで結んだもの
+ */
+export type CNF = {
+  kind: "CNF";
+  v: Clause[];
+};
+
+export const NOT = (v: Variable): NotVariable => ({ kind: "Not", v: v.v });
 
 export const OR = (a: Literal | Clause, b: Literal | Clause): Clause => {
   if (a.kind === "Clause") {
@@ -20,8 +44,6 @@ export const OR = (a: Literal | Clause, b: Literal | Clause): Clause => {
     return { kind: "Clause", v: [a, b] };
   }
 };
-
-export const NOT = (v: Variable): NotVariable => ({ kind: "Not", v: v });
 
 /**
  * At Most one
@@ -38,22 +60,3 @@ export const AMO = (variables: Variable[]): Clause[] => {
 };
 
 export const ALO = (variables: Variable[]): Clause => ({ kind: "Clause", v: variables });
-
-// CNF
-/**
- * リテラル => 変数かその否定
- */
-export type Literal = NotVariable | Variable;
-
-/**
- * 節 => リテラルを OR で結んだもの
- */
-export type Clause = {
-  kind: "Clause";
-  v: Literal[];
-};
-
-export type CNF = {
-  kind: "CNF";
-  v: Clause[];
-};
