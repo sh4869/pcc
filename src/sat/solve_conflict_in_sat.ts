@@ -72,7 +72,7 @@ export class SatConflictSolver implements ConflictSolver {
             .sort((a, b) => (semver.gt(a, b) ? -1 : 1))[0];
           const v = OR(packV(name, targetVersion), NOT(pack));
           depClause.push(v);
-          const ex = await this.depToLogicExpressionInRange(name, targetVersion, cache);
+            const ex = await this.depToLogicExpressionInLatest(name, targetVersion, cache);
           depClause = depClause.concat(ex);
         }
       }
