@@ -39,7 +39,7 @@ export class NpmPackageRepository implements PackageRepository {
         }
       } catch {
         // retry
-        await sleep(1000);
+        await sleep(300);
         return this.fetchPackageInfo(opts);
       }
     }
