@@ -62,10 +62,14 @@ export class NpmPackageRepository implements PackageRepository {
     const map = new Map<string, PackageDependenciesInfo>();
     for (const name in pkgdatainfo) {
       const xmap = new Map<SemVer, Dependencies>();
+      if (pkgdatainfo[name] === undefined) {
+        throw new Error("not found in npm registory");
+      }
       for (const ver in pkgdatainfo[name].versions) {
         const version = semver.parse(ver);
         if (version) {
-          xmap.set(version, pkgdatainfo[name].versions[ver].dependencies || {});
+          const deps = pkgdatainfo[name].versions[ver].dependencies;
+          xmap.set(version, deps || {});
         } else {
           throw new Error(`Semantic Version Parse Error: ${name} - ${ver}`);
         }
