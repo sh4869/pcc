@@ -1,6 +1,6 @@
-import { ConflictSolver, ConflictPackage, NoConflictSituation, Package, PackageUpdateInfo } from "./type";
+import { ConflictSolver, ConflictPackage, NoConflictSituation, Package, PackageUpdateInfo } from "../misc/type";
 import semver, { SemVer } from "semver";
-import { PackageRepository } from "./npm/package_repository";
+import { PackageRepository } from "../misc/npm/package_repository";
 
 type PackageDepndecyList = {
   package: Package;
@@ -11,7 +11,7 @@ const getValidLatestVersion = (condition: string, versions: semver.SemVer[]): se
   return versions.filter(v => semver.satisfies(v.version, condition)).sort((a, b) => (semver.gt(a, b) ? -1 : 1))[0];
 };
 
-export class NpmConflictSolver implements ConflictSolver {
+export class BruteforceConflictSolver implements ConflictSolver {
   private packageRepository: PackageRepository;
   constructor(repository: PackageRepository) {
     this.packageRepository = repository;

@@ -1,9 +1,9 @@
-import { Clause, Variable, OR, NOT, ALO, AMO, CNF } from "./cnf";
-import { ConflictPackage, ConflictSolver, Package, NoConflictSituation, PackageDependenciesInfo } from "../type";
-import { NpmPackageRepository } from "../npm/npm_package_repository";
+import { Clause, Variable, OR, NOT, ALO, AMO, CNF } from "../misc/sat/cnf";
+import { ConflictPackage, ConflictSolver, Package, NoConflictSituation } from "../misc/type";
+import { NpmPackageRepository } from "../misc/npm/npm_package_repository";
 import semver, { SemVer } from "semver";
-import { solveCNF } from "./minisolver";
-import { PackageRepository } from "../npm/package_repository";
+import { solveCNF } from "../misc/sat/minisolver";
+import { PackageRepository } from "../misc/npm/package_repository";
 
 const vName = (name: string, version: SemVer): string => `${name}#${version.version}`;
 
