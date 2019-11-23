@@ -79,7 +79,11 @@ export interface ConflictSolver {
   /**
    * conflict -> NoConflictSisutation
    */
-  solveConflict: (conflictCausePackages: Package[], targetPackages: string[]) => Promise<NoConflictSituation[]>;
+  solveConflict: (
+    conflictCausePackages: Package[],
+    targetPackages: string[],
+    solveOption: { searchInRange: boolean }
+  ) => Promise<NoConflictSituation[]>;
 }
 
 interface UpdateableCheckResult {

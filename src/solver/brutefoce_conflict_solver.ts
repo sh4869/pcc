@@ -65,7 +65,14 @@ export class BruteforceConflictSolver implements ConflictSolver {
     return packs;
   }
 
-  async solveConflict(conflictCausePackages: Package[], targetPackage: string[]): Promise<NoConflictSituation[]> {
+  async solveConflict(
+    conflictCausePackages: Package[],
+    targetPackage: string[],
+    solveOption: { searchInRange: boolean }
+  ): Promise<NoConflictSituation[]> {
+    if (solveOption.searchInRange) {
+      console.error("bruteforce conflit solver not supported search in range.");
+    }
     const beforeVersions: { [name: string]: Package } = {};
     const packageDepndencyMap: {
       [name: string]: Map<SemVer, PackageDepndecyList>;

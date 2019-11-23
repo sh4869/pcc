@@ -33,11 +33,18 @@ pcs
     result.forEach(async v => {
       const causes = v.versions.map(x => x.depenedecyRoot[0]);
       if (args.length === 1) {
-        printNoConflictSituation([v.packageName], await solver.solveConflict(causes, [v.packageName]));
+        printNoConflictSituation(
+          [v.packageName],
+          await solver.solveConflict(causes, [v.packageName], {
+            searchInRange: !!cmdObj.search_in_range
+          })
+        );
       } else if (target === v.packageName) {
         printNoConflictSituation(
           args.slice(0, args.length - 1),
-          await solver.solveConflict(causes, args.slice(0, args.length - 1))
+          await solver.solveConflict(causes, args.slice(0, args.length - 1), {
+            searchInRange: !!cmdObj.search_in_range
+          })
         );
       }
     });

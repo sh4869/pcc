@@ -113,7 +113,11 @@ export class SatConflictSolver implements ConflictSolver {
     return eArray;
   }
 
-  private async createLogicalExpresison(conflictCauses: Package[], targetPackages: string[]): Promise<CNF> {
+  private async createLogicalExpresison(
+    conflictCauses: Package[],
+    targetPackages: string[],
+    solveOption: { searchInRange: boolean }
+  ): Promise<CNF> {
     /// targetPackageのすべてのバージョンについての論理式を作成
     let tExpression: Clause[] = [];
     for (const t of targetPackages) {
@@ -125,16 +129,19 @@ export class SatConflictSolver implements ConflictSolver {
     for (const cause of conflictCauses) {
       if (already.includes(cause.name)) continue;
       already.push(cause.name);
-      tExpression = tExpression.concat(await this.depentsToLogicalExpression(cause.name, cause.version));
+      tExpression = tExpression.concat(
+        await this.depentsToLogicalExpression(cause.name, cause.version, solveOption.searchInRange ? "range" : "latest")
+      );
     }
     return { kind: "CNF", v: tExpression };
   }
 
   public async solveConflict(
     conflictCausePackages: Package[],
-    targetPackage: string[]
+    targetPackage: string[],
+    solveOption: { searchInRange: boolean }
   ): Promise<NoConflictSituation[]> {
-    const cnf = await this.createLogicalExpresison(conflictCausePackages, targetPackage);
+    const cnf = await this.createLogicalExpresison(conflictCausePackages, targetPackage, solveOption);
     const result = solveCNF(cnf);
     if (result.kind === "SAT") {
       const packs = result.v.filter(v => v.v).map(v => vNameToPackage(v.name));
