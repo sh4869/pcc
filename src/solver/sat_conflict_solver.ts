@@ -19,8 +19,8 @@ const vNameToPackage = (vName: string): Package => {
 
 export class SatConflictSolver implements ConflictSolver {
   private packageRepository: PackageRepository;
-  constructor() {
-    this.packageRepository = new NpmPackageRepository();
+  constructor(repository: PackageRepository) {
+    this.packageRepository = repository;
   }
 
   // これは範囲内すべてを探索するやつ
@@ -113,7 +113,7 @@ export class SatConflictSolver implements ConflictSolver {
     return eArray;
   }
 
-  private async createLogicalExpresison(conflictCauses: ConflictPackage, targetPackages: string[]): Promise<CNF> {
+  private async createLogicalExpresison(conflictCauses: Package[], targetPackages: string[]): Promise<CNF> {
     /// targetPackageのすべてのバージョンについての論理式を作成
     let tExpression: Clause[] = [];
     for (const t of targetPackages) {
@@ -122,8 +122,7 @@ export class SatConflictSolver implements ConflictSolver {
     }
     const already: string[] = [];
     /// conflictCauseへのやつを作る
-    for (const v of conflictCauses.versions) {
-      const cause = v.depenedecyRoot[0];
+    for (const cause of conflictCauses) {
       if (already.includes(cause.name)) continue;
       already.push(cause.name);
       tExpression = tExpression.concat(await this.depentsToLogicalExpression(cause.name, cause.version));
@@ -131,16 +130,20 @@ export class SatConflictSolver implements ConflictSolver {
     return { kind: "CNF", v: tExpression };
   }
 
-  public async solveConflict(conflict: ConflictPackage): Promise<NoConflictSituation[]> {
-    const cnf = await this.createLogicalExpresison(conflict, [conflict.packageName]);
+  public async solveConflict(
+    conflictCausePackages: Package[],
+    targetPackage: string[]
+  ): Promise<NoConflictSituation[]> {
+    const cnf = await this.createLogicalExpresison(conflictCausePackages, targetPackage);
     const result = solveCNF(cnf);
     if (result.kind === "SAT") {
       const packs = result.v.filter(v => v.v).map(v => vNameToPackage(v.name));
-      const target = packs.filter(p => p.name === conflict.packageName)[0];
-      const upgradeTarget = conflict.versions
-        .map(v => v.depenedecyRoot[0])
-        .map(d => ({ before: d, after: packs.filter(v => v.name === d.name)[0] }));
-      return [{ updateTargets: upgradeTarget, finalVersion: target.version, targetPackage: target.name }];
+      const target = packs.filter(p => targetPackage.includes(p.name));
+      const upgradeTarget = conflictCausePackages.map(d => ({
+        before: d,
+        after: packs.filter(v => v.name === d.name)[0]
+      }));
+      return [{ updateTargets: upgradeTarget, targetPackages: target }];
     } else {
       return [];
     }

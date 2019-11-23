@@ -48,32 +48,29 @@ export class BruteforceConflictSolver implements ConflictSolver {
     return { package: pack, depndecies: dependecyList };
   }
 
-  private isSolvedConfilicts(
-    target: string,
-    gathering: PackageDepndecyList[]
-  ): { result: boolean; versions: SemVer[] } {
-    const versionsString: string[] = [];
-    const versions: SemVer[] = [];
+  private isSolvedConfilicts(targets: string[], gathering: PackageDepndecyList[]): false | Package[] {
+    //const versions: Array<SemVer[]> = new Array(targets.length);
+    const packs: Package[] = [];
     gathering.forEach(v => {
       Array.from(v.depndecies.values()).forEach(d => {
-        if (d.name === target) {
-          if (!versionsString.find(v => v === d.version.version)) {
-            versions.push(d.version);
-            versionsString.push(d.version.version);
+        if (targets.includes(d.name)) {
+          if (packs.find(v => v.name === d.name)) {
+            return false;
+          } else {
+            packs.push({ name: d.name, version: d.version });
           }
         }
       });
     });
-    return { result: versions.length === 1, versions: versions };
+    return packs;
   }
 
-  async solveConflict(conflict: ConflictPackage): Promise<NoConflictSituation[]> {
+  async solveConflict(conflictCausePackages: Package[], targetPackage: string[]): Promise<NoConflictSituation[]> {
     const beforeVersions: { [name: string]: Package } = {};
     const packageDepndencyMap: {
       [name: string]: Map<SemVer, PackageDepndecyList>;
     } = {};
-    for (const causePackage of conflict.versions) {
-      const targetPackage = causePackage.depenedecyRoot[0];
+    for (const targetPackage of conflictCausePackages) {
       // どうアップデートするべきかを表示するために必要
       beforeVersions[targetPackage.name] = targetPackage;
       const packageVersions = await this.packageRepository.getDependencies(targetPackage.name);
@@ -95,16 +92,15 @@ export class BruteforceConflictSolver implements ConflictSolver {
       if (dependencyListArray.length === conflictCauseNames.length - 1) {
         const t = potentiality[conflictCauseNames[dependencyListArray.length]];
         Array.from(t.values()).forEach(async last => {
-          const result = this.isSolvedConfilicts(conflict.packageName, [...dependencyListArray, last]);
-          if (result.result) {
+          const result = this.isSolvedConfilicts(targetPackage, [...dependencyListArray, last]);
+          if (result) {
             const updateTarget: PackageUpdateInfo[] = [];
             dependencyListArray.forEach(v =>
               updateTarget.push({ before: beforeVersions[v.package.name], after: v.package })
             );
             updateTarget.push({ before: beforeVersions[last.package.name], after: last.package });
             noConflictSituation.push({
-              targetPackage: conflict.packageName,
-              finalVersion: result.versions[0],
+              targetPackages: result,
               updateTargets: updateTarget
             });
           }

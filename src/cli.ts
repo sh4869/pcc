@@ -21,17 +21,24 @@ pcs
 pcs
   .command("solve")
   .option("--bruteforce", "use Brute-force solver")
-  .description("find slove conflict situatuion")
+  .option("--search_in_range", "search solution in range mode (enable only when sat solver mode)")
+  .description("find slove conflict situatuion, use sat-solve solver (default)")
   .action(async (dir, ...args) => {
-    const cmdObj = args[args.length - 1] as { bruteforce: boolean };
+    const cmdObj = args[args.length - 1] as { bruteforce: true | undefined; search_in_range: true | undefined };
     const target = args[0] as string;
     const result = new NpmConflictChecker().checkConflict(getLogicTree(dir as string));
     const solver = cmdObj.bruteforce
       ? new BruteforceConflictSolver(new NpmPackageRepository())
-      : new SatConflictSolver();
+      : new SatConflictSolver(new NpmPackageRepository());
     result.forEach(async v => {
-      if (typeof target === "object" || (typeof target === "string" && target === v.packageName)) {
-        printNoConflictSituation(v, await solver.solveConflict(v));
+      const causes = v.versions.map(x => x.depenedecyRoot[0]);
+      if (args.length === 1) {
+        printNoConflictSituation([v.packageName], await solver.solveConflict(causes, [v.packageName]));
+      } else if (target === v.packageName) {
+        printNoConflictSituation(
+          args.slice(0, args.length - 1),
+          await solver.solveConflict(causes, args.slice(0, args.length - 1))
+        );
       }
     });
   });
