@@ -33,34 +33,43 @@ export class NpmPackageRepository implements PackageRepository {
       try {
         const pkginfoPromise = util.promisify(pkginfo);
         const newData = (await pkginfoPromise(newOpts)).data as PkgDataInfo;
-        // キャッシュを保存
+        // save in cache
         for (const i in newData) {
           this.cache[i] = newData[i];
         }
       } catch {
-        // 1秒待ってからやり直す
-        await sleep(1000);
+        // retry
+        await sleep(300);
         return this.fetchPackageInfo(opts);
       }
     }
     const result: PkgDataInfo = {};
-    // キャッシュからデータを取り出し
-    // 非効率的だけど大した数にはならないので
+    // TODO: Efficient implementation
     opts.packages.forEach(v => {
       result[v] = this.cache[v];
     });
     return result;
   }
 
-  public async get(names: string[]): Promise<Map<string, PackageDependenciesInfo>> {
+  public async getVersions(name: string): Promise<Array<SemVer>> {
+    const pkdata = await this.fetchPackageInfo({ packages: [name] });
+    const d = pkdata[name];
+    return Object.keys(d.versions).map(v => new SemVer(v));
+  }
+
+  public async getMultiDependencies(names: string[]): Promise<Map<string, PackageDependenciesInfo>> {
     const pkgdatainfo = await this.fetchPackageInfo({ packages: names });
     const map = new Map<string, PackageDependenciesInfo>();
     for (const name in pkgdatainfo) {
       const xmap = new Map<SemVer, Dependencies>();
+      if (pkgdatainfo[name] === undefined) {
+        throw new Error("not found in npm registory");
+      }
       for (const ver in pkgdatainfo[name].versions) {
         const version = semver.parse(ver);
         if (version) {
-          xmap.set(version, pkgdatainfo[name].versions[ver].dependencies || {});
+          const deps = pkgdatainfo[name].versions[ver].dependencies;
+          xmap.set(version, deps || {});
         } else {
           throw new Error(`Semantic Version Parse Error: ${name} - ${ver}`);
         }
@@ -68,5 +77,19 @@ export class NpmPackageRepository implements PackageRepository {
       map.set(name, xmap);
     }
     return map;
+  }
+
+  public async getDependencies(name: string): Promise<PackageDependenciesInfo> {
+    const pkgdatainfo = (await this.fetchPackageInfo({ packages: [name] }))[name];
+    const xmap = new Map<SemVer, Dependencies>();
+    for (const ver in pkgdatainfo.versions) {
+      const version = semver.parse(ver);
+      if (version) {
+        xmap.set(version, pkgdatainfo.versions[ver].dependencies || {});
+      } else {
+        throw new Error(`Semantic Version Parse Error: ${name} - ${ver}`);
+      }
+    }
+    return xmap;
   }
 }

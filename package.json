@@ -21,6 +21,7 @@
   "dependencies": {
     "chalk": "^2.4.2",
     "commander": "^2.12.2",
+    "minisolvers": "git+https://github.com/liffiton/JSMiniSolvers.git",
     "npm-logical-tree": "^1.2.1",
     "npm-registry-package-info": "^1.0.5",
     "package-json": "^6.4.0",

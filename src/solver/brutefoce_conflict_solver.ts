@@ -1,6 +1,6 @@
-import { ConflictSolver, ConflictPackage, NoConflictSituation, Package, PackageUpdateInfo } from "./type";
+import { ConflictSolver, ConflictPackage, NoConflictSituation, Package, PackageUpdateInfo } from "../misc/type";
 import semver, { SemVer } from "semver";
-import { PackageRepository } from "./npm/package_repository";
+import { PackageRepository } from "../misc/npm/package_repository";
 
 type PackageDepndecyList = {
   package: Package;
@@ -11,7 +11,7 @@ const getValidLatestVersion = (condition: string, versions: semver.SemVer[]): se
   return versions.filter(v => semver.satisfies(v.version, condition)).sort((a, b) => (semver.gt(a, b) ? -1 : 1))[0];
 };
 
-export class NpmConflictSolver implements ConflictSolver {
+export class BruteforceConflictSolver implements ConflictSolver {
   private packageRepository: PackageRepository;
   constructor(repository: PackageRepository) {
     this.packageRepository = repository;
@@ -33,7 +33,7 @@ export class NpmConflictSolver implements ConflictSolver {
         );
         if (verisonDependecy) {
           const dependecyNames = Array.from(Object.keys(verisonDependecy));
-          const packageDependecyInfo = await this.packageRepository.get(dependecyNames);
+          const packageDependecyInfo = await this.packageRepository.getMultiDependencies(dependecyNames);
           for (const name in verisonDependecy) {
             const versions = packageDependecyInfo.get(name);
             if (versions) {
@@ -44,41 +44,43 @@ export class NpmConflictSolver implements ConflictSolver {
         }
       }
     };
-    const packageDependecy = (await this.packageRepository.get([pack.name])).get(pack.name);
-    if (packageDependecy) await addDependency(pack, packageDependecy);
+    await addDependency(pack, await this.packageRepository.getDependencies(pack.name));
     return { package: pack, depndecies: dependecyList };
   }
 
-  private isSolvedConfilicts(
-    target: string,
-    gathering: PackageDepndecyList[]
-  ): { result: boolean; versions: SemVer[] } {
-    const versionsString: string[] = [];
-    const versions: SemVer[] = [];
+  private isSolvedConfilicts(targets: string[], gathering: PackageDepndecyList[]): false | Package[] {
+    //const versions: Array<SemVer[]> = new Array(targets.length);
+    const packs: Package[] = [];
     gathering.forEach(v => {
       Array.from(v.depndecies.values()).forEach(d => {
-        if (d.name === target) {
-          if (!versionsString.find(v => v === d.version.version)) {
-            versions.push(d.version);
-            versionsString.push(d.version.version);
+        if (targets.includes(d.name)) {
+          if (packs.find(v => v.name === d.name)) {
+            return false;
+          } else {
+            packs.push({ name: d.name, version: d.version });
           }
         }
       });
     });
-    return { result: versions.length === 1, versions: versions };
+    return packs;
   }
 
-  async solveConflict(conflict: ConflictPackage): Promise<NoConflictSituation[]> {
+  async solveConflict(
+    conflictCausePackages: Package[],
+    targetPackage: string[],
+    solveOption: { searchInRange: boolean }
+  ): Promise<NoConflictSituation[]> {
+    if (solveOption.searchInRange) {
+      console.error("bruteforce conflit solver not supported search in range.");
+    }
     const beforeVersions: { [name: string]: Package } = {};
     const packageDepndencyMap: {
       [name: string]: Map<SemVer, PackageDepndecyList>;
     } = {};
-    for (const causePackage of conflict.versions) {
-      const targetPackage = causePackage.depenedecyRoot[0];
+    for (const targetPackage of conflictCausePackages) {
       // どうアップデートするべきかを表示するために必要
       beforeVersions[targetPackage.name] = targetPackage;
-      const packageVersions = (await this.packageRepository.get([targetPackage.name])).get(targetPackage.name);
-      if (!packageVersions) throw new Error("failed get package version info");
+      const packageVersions = await this.packageRepository.getDependencies(targetPackage.name);
       const checkVersions = Array.from(packageVersions.keys()).filter(v => semver.gte(v, targetPackage.version));
       const versionDependecyMap = new Map<semver.SemVer, PackageDepndecyList>();
       for (const v of checkVersions) {
@@ -97,16 +99,15 @@ export class NpmConflictSolver implements ConflictSolver {
       if (dependencyListArray.length === conflictCauseNames.length - 1) {
         const t = potentiality[conflictCauseNames[dependencyListArray.length]];
         Array.from(t.values()).forEach(async last => {
-          const result = this.isSolvedConfilicts(conflict.packageName, [...dependencyListArray, last]);
-          if (result.result) {
+          const result = this.isSolvedConfilicts(targetPackage, [...dependencyListArray, last]);
+          if (result) {
             const updateTarget: PackageUpdateInfo[] = [];
             dependencyListArray.forEach(v =>
               updateTarget.push({ before: beforeVersions[v.package.name], after: v.package })
             );
             updateTarget.push({ before: beforeVersions[last.package.name], after: last.package });
             noConflictSituation.push({
-              targetPackage: conflict.packageName,
-              finalVersion: result.versions[0],
+              targetPackages: result,
               updateTargets: updateTarget
             });
           }

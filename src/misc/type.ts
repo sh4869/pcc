@@ -68,8 +68,7 @@ export interface PackageUpdateInfo {
 }
 
 export interface NoConflictSituation {
-  targetPackage: string;
-  finalVersion: SemVer;
+  targetPackages: Package[];
   updateTargets: PackageUpdateInfo[];
 }
 
@@ -80,7 +79,11 @@ export interface ConflictSolver {
   /**
    * conflict -> NoConflictSisutation
    */
-  solveConflict: (conflict: ConflictPackage) => Promise<NoConflictSituation[]>;
+  solveConflict: (
+    conflictCausePackages: Package[],
+    targetPackages: string[],
+    solveOption: { searchInRange: boolean }
+  ) => Promise<NoConflictSituation[]>;
 }
 
 interface UpdateableCheckResult {
