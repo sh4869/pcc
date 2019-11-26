@@ -1,6 +1,5 @@
 import { Clause, Variable, OR, NOT, ALO, AMO, CNF } from "../misc/sat/cnf";
-import { ConflictPackage, ConflictSolver, Package, NoConflictSituation } from "../misc/type";
-import { NpmPackageRepository } from "../misc/npm/npm_package_repository";
+import { ConflictSolver, Package, NoConflictSituation } from "../misc/type";
 import semver, { SemVer } from "semver";
 import { solveCNF } from "../misc/sat/minisolver";
 import { PackageRepository } from "../misc/npm/package_repository";
@@ -32,7 +31,9 @@ export class SatConflictSolver implements ConflictSolver {
       const dep = v.get(Array.from(v.keys()).filter(v => semver.eq(v, version))[0]);
       if (!dep) throw new Error("cant get dep");
       const dependecyNames = Array.from(Object.keys(dep));
+      /* eslint-disable @typescript-eslint/no-unused-vars */
       const packageDependecyInfo = await this.packageRepository.getMultiDependencies(dependecyNames).catch(_ => null);
+      /* eslint-enable @typescript-eslint/no-unused-vars */
       if (packageDependecyInfo === null) return null;
       let depClause: Clause[] = [];
       for (const name in dep) {
@@ -68,9 +69,11 @@ export class SatConflictSolver implements ConflictSolver {
       const dep = v.get(Array.from(v.keys()).filter(v => semver.eq(v, version))[0]);
       if (!dep) throw new Error("cant get dep");
       const dependecyNames = Array.from(Object.keys(dep));
+      /* eslint-disable @typescript-eslint/no-unused-vars */
       const packageDependecyInfo = await this.packageRepository.getMultiDependencies(dependecyNames).catch(v => {
         throw new Error("Cant solve dependencies");
       });
+      /* eslint-enable @typescript-eslint/no-unused-vars */
       let depClause: Clause[] = [];
       for (const name in dep) {
         const versions = packageDependecyInfo.get(name);
