@@ -1,4 +1,4 @@
-import { ConflictSolver, ConflictPackage, NoConflictSituation, Package, PackageUpdateInfo } from "../misc/type";
+import { ConflictSolver, NoConflictSituation, Package, PackageUpdateInfo } from "../misc/type";
 import semver, { SemVer } from "semver";
 import { PackageRepository } from "../misc/npm/package_repository";
 
@@ -52,17 +52,24 @@ export class BruteforceConflictSolver implements ConflictSolver {
     //const versions: Array<SemVer[]> = new Array(targets.length);
     const packs: Package[] = [];
     gathering.forEach(v => {
+      packs.push(v.package);
       Array.from(v.depndecies.values()).forEach(d => {
         if (targets.includes(d.name)) {
-          if (packs.find(v => v.name === d.name)) {
-            return false;
-          } else {
-            packs.push({ name: d.name, version: d.version });
-          }
+          packs.push(d);
         }
       });
     });
-    return packs;
+    const devVersion: { [key: string]: SemVer } = {};
+    const result: Package[] = [];
+    for (const pack of packs) {
+      if (!devVersion[pack.name]) {
+        devVersion[pack.name] = pack.version;
+        result.push(pack);
+      } else if (devVersion[pack.name] && !semver.eq(devVersion[pack.name], pack.version)) {
+        return false;
+      }
+    }
+    return result;
   }
 
   async solveConflict(
