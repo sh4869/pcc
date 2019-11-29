@@ -25,9 +25,11 @@
     "npm-logical-tree": "^1.2.1",
     "npm-registry-package-info": "^1.0.5",
     "package-json": "^6.4.0",
+    "progress": "^2.0.3",
     "semver": "^6.0.1"
   },
   "devDependencies": {
+    "@types/progress": "^2.0.3",
     "@types/node": "^12.7.2",
     "@types/npm-registry-package-info": "^1.0.0",
     "@types/semver": "^6.0.1",

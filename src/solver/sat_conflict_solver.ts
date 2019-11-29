@@ -3,6 +3,7 @@ import { ConflictSolver, Package, NoConflictSituation, Dependencies } from "../m
 import semver, { SemVer } from "semver";
 import { solveCNF } from "../misc/sat/minisolver";
 import { PackageRepository } from "../misc/npm/package_repository";
+import * as progress from "progress";
 
 const vName = (name: string, version: SemVer): string => `${name}#${version.version}`;
 
@@ -15,6 +16,10 @@ const vNameToPackage = (vName: string): Package => {
   const t = vName.split("#");
   return { name: t[0], version: new SemVer(t[1]) };
 };
+
+function notNull<T>(item: T | null): item is T {
+  return item !== null;
+}
 
 export class SatConflictSolver implements ConflictSolver {
   private packageRepository: PackageRepository;
@@ -66,7 +71,7 @@ export class SatConflictSolver implements ConflictSolver {
     version: SemVer,
     cache: string[],
     dependencies: Dependencies | undefined
-  ): Promise<Clause[]> {
+  ): Promise<Clause[] | null> {
     if (!cache.includes(vName(name, version))) {
       cache.push(vName(name, version));
       const pack = packV(name, version);
@@ -79,19 +84,27 @@ export class SatConflictSolver implements ConflictSolver {
       const dependecyNames = Array.from(Object.keys(dep));
       return this.packageRepository.getMultiDependencies(dependecyNames).then(async v => {
         const depClause: Clause[] = [];
-        const promisies: Promise<Clause[]>[] = [];
+        const promisies: Promise<Clause[] | null>[] = [];
         for (const name in dep) {
           const versions = v.get(name);
           if (versions) {
             const targetVersion = Array.from(versions.keys())
               .filter(v => semver.satisfies(v.version, dep[name]))
               .sort((a, b) => (semver.gt(a, b) ? -1 : 1))[0];
+            if (!targetVersion) {
+              return null;
+            }
             depClause.push(OR(packV(name, targetVersion), NOT(pack)));
             promisies.push(this.depToLogicExpressionInLatest(name, targetVersion, cache, versions.get(targetVersion)));
           }
         }
         const d = await Promise.all(promisies);
-        return d.reduce((v, z) => v.concat(z), []).concat(depClause);
+        const x = d.filter(notNull);
+        if (x.length > d.length) {
+          return null;
+        } else {
+          return x.reduce((v, z) => v.concat(z), []).concat(depClause);
+        }
       });
     } else {
       return [];
@@ -103,10 +116,15 @@ export class SatConflictSolver implements ConflictSolver {
     lowest: SemVer,
     method: "range" | "latest" = "latest"
   ): Promise<Clause[]> {
-    const target = (await this.packageRepository.getVersions(name)).filter(v => semver.gte(v, lowest));
+    const target = (await this.packageRepository.getVersions(name)).filter(v => {
+      const d = semver.prerelease(v);
+      return semver.gte(v, lowest) && !d;
+    });
     const vs = target.map(v => packV(name, v));
+    const bar = new progress.default(`get ${name} dependencies [:bar] :current/:total`, target.length);
     let eArray: Clause[] = [...AMO(vs), ALO(vs)];
     for (const version of target) {
+      bar.tick();
       const clause =
         method === "latest"
           ? await this.depToLogicExpressionInLatest(name, version, [], undefined)
