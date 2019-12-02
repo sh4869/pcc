@@ -32,7 +32,7 @@ export class SatConflictSolver implements ConflictSolver {
   private getValidLatestVersion = (condition: string, versions: semver.SemVer[]): semver.SemVer =>
     versions.filter(v => semver.satisfies(v.version, condition)).sort((a, b) => (semver.gt(a, b) ? -1 : 1))[0];
 
-  // これは範囲内すべてを探索するやつ
+  // TODO: Fix
   private async depToLogicExpressionInRange(name: string, version: SemVer, cache: string[]): Promise<Clause[] | null> {
     if (!cache.includes(vName(name, version))) {
       cache.push(vName(name, version));
@@ -119,24 +119,21 @@ export class SatConflictSolver implements ConflictSolver {
     lowest: SemVer,
     method: "range" | "latest" = "latest"
   ): Promise<Clause[]> {
-    const target = (await this.packageRepository.getVersions(name)).filter(v => {
-      const d = semver.prerelease(v);
-      return semver.gte(v, lowest) && !d;
-    });
-    const vs = target.map(v => packV(name, v));
-    const bar = new progress.default(`get ${name} dependencies :current/:total`, target.length);
+    const targets = (await this.packageRepository.getVersions(name)).filter(v => semver.gte(v, lowest));
+    const vs = targets.map(v => packV(name, v));
     let eArray: Clause[] = [...AMO(vs), ALO(vs)];
-    for (const version of target) {
+    const bar = new progress.default(`get ${name} dependencies :current/:total`, targets.length);
+    for (const version of targets) {
       bar.tick();
-      const clause =
+      const clauses =
         method === "latest"
           ? await this.depToLogicExpressionInLatest(name, version, [], undefined)
           : await this.depToLogicExpressionInRange(name, version, []);
-      if (clause === null) {
+      if (clauses === null) {
         // if depLogicExpression return null, solve the package's dependencies is impossible
         eArray.push({ kind: "Clause", v: [NOT(packV(name, version))] });
       } else {
-        eArray = eArray.concat(clause);
+        eArray = eArray.concat(clauses);
       }
     }
     return eArray;
