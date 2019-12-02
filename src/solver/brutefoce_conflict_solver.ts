@@ -107,7 +107,7 @@ export class BruteforceConflictSolver implements ConflictSolver {
       const bar = new progress.default(`get ${targetPackage.name} dependencies :current/:total`, checkVersions.length);
       const versionDependecyMap = new Map<semver.SemVer, PackageDepndecyList>();
       for (const v of checkVersions) {
-        bar.tick();
+        // bar.tick();
         const depndecyList = await this.getDependencies({ name: targetPackage.name, version: v });
         versionDependecyMap.set(v, { package: { name: targetPackage.name, version: v }, depndecies: depndecyList });
       }
@@ -122,7 +122,7 @@ export class BruteforceConflictSolver implements ConflictSolver {
     ): void => {
       if (dependencyListArray.length === conflictCauseNames.length - 1) {
         const t = potentiality[conflictCauseNames[dependencyListArray.length]];
-        Array.from(t.values()).forEach(async last => {
+        for (const last of t.values()) {
           const result = this.isSolvedConfilicts(targetPackage, [...dependencyListArray, last]);
           if (result) {
             const updateTarget: PackageUpdateInfo[] = [];
@@ -137,17 +137,18 @@ export class BruteforceConflictSolver implements ConflictSolver {
               after: last.package
             });
             noConflictSituation.push({
-              targetPackages: result,
+              targetPackages: result.filter(d => targetPackage.includes(d.name)),
               updateTargets: updateTarget
             });
           }
-        });
+        }
         // 総当りをするために再帰する
       } else {
         const t = potentiality[conflictCauseNames[dependencyListArray.length]];
-        Array.from(t.values()).forEach(v => {
-          checkVersion(potentiality, [...dependencyListArray, v]);
-        });
+        for (const v of t.values()) {
+          const x = dependencyListArray.concat(v);
+          if (this.isSolvedConfilicts(targetPackage, x)) checkVersion(potentiality, x);
+        }
       }
     };
     checkVersion(packageDepndencyMap, []);

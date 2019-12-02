@@ -124,7 +124,7 @@ export class SatConflictSolver implements ConflictSolver {
     let eArray: Clause[] = [...AMO(vs), ALO(vs)];
     const bar = new progress.default(`get ${name} dependencies :current/:total`, targets.length);
     for (const version of targets) {
-      bar.tick();
+      // bar.tick();
       const clauses =
         method === "latest"
           ? await this.depToLogicExpressionInLatest(name, version, [], undefined)

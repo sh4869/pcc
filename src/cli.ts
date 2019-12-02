@@ -1,10 +1,13 @@
 import { Command } from "commander";
 import { NpmConflictChecker } from "./checker/npm_conflict_checker";
 import { getLogicTree } from "./misc/npm/logic_tree";
+import { Package } from "./misc/type";
 import { NpmPackageRepository } from "./misc/npm/npm_package_repository";
 import { BruteforceConflictSolver } from "./solver/brutefoce_conflict_solver";
 import { SatConflictSolver } from "./solver/sat_conflict_solver";
 import { printConflitResult, printNoConflictSituation } from "./misc/printer";
+import { MockPackageRepository } from "./misc/mock/mock_package_repository";
+import { SemVer } from "semver";
 
 const pcs = new Command("pcs").version("0.0.1");
 
@@ -48,6 +51,37 @@ pcs
         );
       }
     });
+  });
+
+const PACK_NUM = 10000;
+const VERSION_NUM = 12;
+
+pcs
+  .command("test")
+  .description("mock function")
+  .option("-p, --packnum <number>", "package number")
+  .option("-v, --vernum <number>", "version number")
+  .action(async (...args) => {
+    const option = args[args.length - 1] as { packnum: string | undefined; vernum: string | undefined };
+    const packNum = option.packnum ? Number(option.packnum) : PACK_NUM;
+    const vernum = option.vernum ? Number(option.vernum) : VERSION_NUM;
+    const repository = new MockPackageRepository(packNum, vernum);
+    const satSolver = new SatConflictSolver(repository);
+    const bruteSolver = new BruteforceConflictSolver(repository);
+    const dep = "dep";
+    const causes = new Array(packNum)
+      .fill(0)
+      .map<Package>((v, i) => ({ name: i.toString(), version: new SemVer("1.0.0") }));
+    console.log("sat solver");
+    console.time("sat-solver");
+    console.log((await satSolver.solveConflict(causes, [dep], { searchInRange: false })).length);
+    // printNoConflictSituation([dep], await satSolver.solveConflict(causes, [dep], { searchInRange: false }));
+    console.timeEnd("sat-solver");
+    console.log("brute solver");
+    console.time("brute-solver");
+    console.log((await bruteSolver.solveConflict(causes, [dep], { searchInRange: false })).length);
+    // printNoConflictSituation([dep], await bruteSolver.solveConflict(causes, [dep], { searchInRange: false }));
+    console.timeEnd("brute-solver");
   });
 
 pcs.parse(process.argv);
