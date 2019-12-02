@@ -1,5 +1,6 @@
 import { ConflictSolver, NoConflictSituation, Package, PackageUpdateInfo, Dependencies } from "../misc/type";
 import semver, { SemVer } from "semver";
+import * as progress from "progress";
 import { PackageRepository } from "../misc/npm/package_repository";
 
 type PackageDepndecyList = {
@@ -13,8 +14,10 @@ const getValidLatestVersion = (condition: string, versions: semver.SemVer[]): se
 
 export class BruteforceConflictSolver implements ConflictSolver {
   private packageRepository: PackageRepository;
+  private depCache: { [key: string]: Package[] };
   constructor(repository: PackageRepository) {
     this.packageRepository = repository;
+    this.depCache = {};
   }
 
   private async getDependenciesS(
@@ -24,22 +27,25 @@ export class BruteforceConflictSolver implements ConflictSolver {
   ): Promise<Array<Package>> {
     if (!cache.has(JSON.stringify(pack))) {
       cache.set(JSON.stringify(pack), pack);
+      if (this.depCache[JSON.stringify(pack)]) return this.depCache[JSON.stringify(pack)];
       if (dep) {
         const dependecyNames = Array.from(Object.keys(dep));
         return this.packageRepository.getMultiDependencies(dependecyNames).then(async v => {
           const promieses: Promise<Array<Package>>[] = [];
           const x: Package[] = [];
+          const depPackages: Package[] = [];
           for (const name in dep) {
             const versions = v.get(name);
             if (versions) {
               const targetVersion = getValidLatestVersion(dep[name], Array.from(versions.keys()));
-              x.push({ name: name, version: targetVersion });
-              promieses.push(
-                this.getDependenciesS({ name: name, version: targetVersion }, cache, versions.get(targetVersion))
-              );
+              const target = { name: name, version: targetVersion };
+              x.push(target);
+              promieses.push(this.getDependenciesS(target, cache, versions.get(targetVersion)));
+              depPackages.push(target);
             }
           }
           const d = await Promise.all(promieses);
+          depPackages.forEach((v, i) => (this.depCache[JSON.stringify(v)] = d[i]));
           return d.reduce((r, l) => r.concat(l), []).concat(x);
         });
       } else {
@@ -88,7 +94,6 @@ export class BruteforceConflictSolver implements ConflictSolver {
     if (solveOption.searchInRange) {
       console.error("bruteforce conflit solver not supported search in range.");
     }
-    const beforeVersions: { [name: string]: Package } = {};
     const packageDepndencyMap: {
       [name: string]: Map<SemVer, PackageDepndecyList>;
     } = {};
@@ -97,16 +102,18 @@ export class BruteforceConflictSolver implements ConflictSolver {
       if (cache.includes(targetPackage.name)) continue;
       cache.push(targetPackage.name);
       // どうアップデートするべきかを表示するために必要
-      beforeVersions[targetPackage.name] = targetPackage;
       const packageVersions = await this.packageRepository.getDependencies(targetPackage.name);
       const checkVersions = Array.from(packageVersions.keys()).filter(v => semver.gte(v, targetPackage.version));
+      const bar = new progress.default(`get ${targetPackage.name} dependencies :current/:total`, checkVersions.length);
       const versionDependecyMap = new Map<semver.SemVer, PackageDepndecyList>();
       for (const v of checkVersions) {
+        bar.tick();
         const depndecyList = await this.getDependencies({ name: targetPackage.name, version: v });
         versionDependecyMap.set(v, { package: { name: targetPackage.name, version: v }, depndecies: depndecyList });
       }
       packageDepndencyMap[targetPackage.name] = versionDependecyMap;
     }
+
     const conflictCauseNames: Array<string> = Array.from(Object.keys(packageDepndencyMap));
     const noConflictSituation: NoConflictSituation[] = [];
     const checkVersion = (
@@ -120,9 +127,15 @@ export class BruteforceConflictSolver implements ConflictSolver {
           if (result) {
             const updateTarget: PackageUpdateInfo[] = [];
             dependencyListArray.forEach(v =>
-              updateTarget.push({ before: beforeVersions[v.package.name], after: v.package })
+              updateTarget.push({
+                before: conflictCausePackages.filter(d => d.name === v.package.name)[0],
+                after: v.package
+              })
             );
-            updateTarget.push({ before: beforeVersions[last.package.name], after: last.package });
+            updateTarget.push({
+              before: conflictCausePackages.filter(d => d.name === last.package.name)[0],
+              after: last.package
+            });
             noConflictSituation.push({
               targetPackages: result,
               updateTargets: updateTarget
