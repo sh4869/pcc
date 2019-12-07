@@ -1,4 +1,5 @@
-import { ConflictSolver, NoConflictSituation, Package, PackageUpdateInfo, Dependencies } from "../misc/type";
+import { Package, Dependencies } from "../misc/type";
+import { ConflictSolver, NoConflictSituation, PackageUpdateInfo } from "./conflict_solver";
 import semver, { SemVer } from "semver";
 import * as progress from "progress";
 import { PackageRepository } from "../misc/npm/package_repository";
@@ -86,14 +87,7 @@ export class BruteforceConflictSolver implements ConflictSolver {
     return result;
   }
 
-  async solveConflict(
-    conflictCausePackages: Package[],
-    targetPackage: string[],
-    solveOption: { searchInRange: boolean }
-  ): Promise<NoConflictSituation[]> {
-    if (solveOption.searchInRange) {
-      console.error("bruteforce conflit solver not supported search in range.");
-    }
+  async solveConflict(conflictCausePackages: Package[], targetPackage: string[]): Promise<NoConflictSituation[]> {
     const packageDepndencyMap: {
       [name: string]: Map<SemVer, PackageDepndecyList>;
     } = {};
@@ -107,7 +101,7 @@ export class BruteforceConflictSolver implements ConflictSolver {
       const bar = new progress.default(`get ${targetPackage.name} dependencies :current/:total`, checkVersions.length);
       const versionDependecyMap = new Map<semver.SemVer, PackageDepndecyList>();
       for (const v of checkVersions) {
-        // bar.tick();
+        bar.tick();
         const depndecyList = await this.getDependencies({ name: targetPackage.name, version: v });
         versionDependecyMap.set(v, { package: { name: targetPackage.name, version: v }, depndecies: depndecyList });
       }
