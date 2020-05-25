@@ -1,8 +1,9 @@
 import { Clause, Variable, OR, NOT, ALO, AMO, CNF } from "../misc/sat/cnf";
-import { ConflictSolver, Package, NoConflictSituation, Dependencies } from "../misc/type";
+import { Package, Dependencies } from "../misc/type";
+import { ConflictSolver, NoConflictSituation } from "./conflict_solver";
+import { PackageRepository } from "../misc/npm/package_repository";
 import semver, { SemVer } from "semver";
 import { solveCNF } from "../misc/sat/minisolver";
-import { PackageRepository } from "../misc/npm/package_repository";
 import * as progress from "progress";
 
 const vName = (name: string, version: SemVer): string => `${name}#${version.version}`;
@@ -21,7 +22,7 @@ function notNull<T>(item: T | null): item is T {
   return item !== null;
 }
 
-export class SatConflictSolver implements ConflictSolver {
+export class SatConflictSolverLatestVersion implements ConflictSolver {
   private packageRepository: PackageRepository;
   private clauseCache: { [key: string]: Clause[] };
   constructor(repository: PackageRepository) {
@@ -31,44 +32,6 @@ export class SatConflictSolver implements ConflictSolver {
 
   private getValidLatestVersion = (condition: string, versions: semver.SemVer[]): semver.SemVer =>
     versions.filter(v => semver.satisfies(v.version, condition)).sort((a, b) => (semver.gt(a, b) ? -1 : 1))[0];
-
-  // TODO: Fix
-  private async depToLogicExpressionInRange(name: string, version: SemVer, cache: string[]): Promise<Clause[] | null> {
-    if (!cache.includes(vName(name, version))) {
-      cache.push(vName(name, version));
-      const pack = packV(name, version);
-      const v = await this.packageRepository.getDependencies(name);
-      const dep = v.get(Array.from(v.keys()).filter(v => semver.eq(v, version))[0]);
-      if (!dep) throw new Error("cant get dep");
-      const dependecyNames = Array.from(Object.keys(dep));
-      /* eslint-disable @typescript-eslint/no-unused-vars */
-      const packageDependecyInfo = await this.packageRepository.getMultiDependencies(dependecyNames).catch(_ => null);
-      /* eslint-enable @typescript-eslint/no-unused-vars */
-      if (packageDependecyInfo === null) return null;
-      let depClause: Clause[] = [];
-      for (const name in dep) {
-        const versions = packageDependecyInfo.get(name);
-        if (versions) {
-          const targetVersions = Array.from(versions.keys()).filter(v => semver.satisfies(v.version, dep[name]));
-          // ¬A_x ∨ (A_x AND ALO(D_1,D_2....D_x)) => (¬A_x ∨A_x) ∧ (ALO(D_1,D_2....D_x) ∨ ¬A_x) => (ALO(D_1,D_2....D_x) ∨ ¬A_x)
-          const v = OR(ALO(targetVersions.map(v => packV(name, v))), NOT(pack));
-          depClause.push(v);
-          for (const version of targetVersions) {
-            const ex = await this.depToLogicExpressionInRange(name, version, cache);
-            if (ex === null) {
-              // if depLogicExpression return null, solve the package's dependencies is impossible
-              depClause.push({ kind: "Clause", v: [NOT(packV(name, version))] });
-            } else {
-              depClause = depClause.concat(ex);
-            }
-          }
-        }
-      }
-      return depClause;
-    } else {
-      return [];
-    }
-  }
 
   // 依存関係の中での最新版を取得する
   private async depToLogicExpressionInLatest(
@@ -114,21 +77,14 @@ export class SatConflictSolver implements ConflictSolver {
     }
   }
 
-  private async depentsToLogicalExpression(
-    name: string,
-    lowest: SemVer,
-    method: "range" | "latest" = "latest"
-  ): Promise<Clause[]> {
+  private async depentsToLogicalExpression(name: string, lowest: SemVer): Promise<Clause[]> {
     const targets = (await this.packageRepository.getVersions(name)).filter(v => semver.gte(v, lowest));
     const vs = targets.map(v => packV(name, v));
     let eArray: Clause[] = [...AMO(vs), ALO(vs)];
     const bar = new progress.default(`get ${name} dependencies :current/:total`, targets.length);
     for (const version of targets) {
-      // bar.tick();
-      const clauses =
-        method === "latest"
-          ? await this.depToLogicExpressionInLatest(name, version, [], undefined)
-          : await this.depToLogicExpressionInRange(name, version, []);
+      bar.tick();
+      const clauses = await this.depToLogicExpressionInLatest(name, version, [], undefined);
       if (clauses === null) {
         // if depLogicExpression return null, solve the package's dependencies is impossible
         eArray.push({ kind: "Clause", v: [NOT(packV(name, version))] });
@@ -139,11 +95,7 @@ export class SatConflictSolver implements ConflictSolver {
     return eArray;
   }
 
-  private async createLogicalExpresison(
-    conflictCauses: Package[],
-    targetPackages: string[],
-    solveOption: { searchInRange: boolean }
-  ): Promise<CNF> {
+  private async createLatestExpresison(conflictCauses: Package[], targetPackages: string[]): Promise<CNF> {
     /// targetPackageのすべてのバージョンについての論理式を作成
     let tExpression: Clause[] = [];
     for (const t of targetPackages) {
@@ -155,19 +107,16 @@ export class SatConflictSolver implements ConflictSolver {
     for (const cause of conflictCauses) {
       if (already.includes(cause.name)) continue;
       already.push(cause.name);
-      tExpression = tExpression.concat(
-        await this.depentsToLogicalExpression(cause.name, cause.version, solveOption.searchInRange ? "range" : "latest")
-      );
+      tExpression = tExpression.concat(await this.depentsToLogicalExpression(cause.name, cause.version));
     }
     return { kind: "CNF", v: tExpression };
   }
 
   public async solveConflict(
     conflictCausePackages: Package[],
-    targetPackage: string[],
-    solveOption: { searchInRange: boolean }
+    targetPackage: string[]
   ): Promise<NoConflictSituation[]> {
-    const cnf = await this.createLogicalExpresison(conflictCausePackages, targetPackage, solveOption);
+    const cnf = await this.createLatestExpresison(conflictCausePackages, targetPackage);
     const result = solveCNF(cnf);
     if (result.kind === "SAT") {
       const packs = result.v.filter(v => v.v).map(v => vNameToPackage(v.name));

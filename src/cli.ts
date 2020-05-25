@@ -4,7 +4,7 @@ import { getLogicTree } from "./misc/npm/logic_tree";
 import { Package } from "./misc/type";
 import { NpmPackageRepository } from "./misc/npm/npm_package_repository";
 import { BruteforceConflictSolver } from "./solver/brutefoce_conflict_solver";
-import { SatConflictSolver } from "./solver/sat_conflict_solver";
+import { SatConflictSolverLatestVersion } from "./solver/sat_conflict_solver_latest_ver";
 import { printConflitResult, printNoConflictSituation } from "./misc/printer";
 import { MockPackageRepository } from "./misc/mock/mock_package_repository";
 import { SemVer } from "semver";
@@ -24,30 +24,22 @@ pcs
 pcs
   .command("solve")
   .option("--bruteforce", "use Brute-force solver")
-  .option("--search_in_range", "search solution in range mode (enable only when sat solver mode)")
   .description("find slove conflict situatuion, use sat-solve solver (default)")
   .action(async (dir, ...args) => {
-    const cmdObj = args[args.length - 1] as { bruteforce: true | undefined; search_in_range: true | undefined };
+    const cmdObj = args[args.length - 1] as { bruteforce: true | undefined };
     const target = args[0] as string;
     const result = new NpmConflictChecker().checkConflict(getLogicTree(dir as string));
     const solver = cmdObj.bruteforce
       ? new BruteforceConflictSolver(new NpmPackageRepository())
-      : new SatConflictSolver(new NpmPackageRepository());
+      : new SatConflictSolverLatestVersion(new NpmPackageRepository());
     result.forEach(async v => {
       const causes = v.versions.map(x => x.depenedecyRoot[0]);
       if (args.length === 1) {
-        printNoConflictSituation(
-          [v.packageName],
-          await solver.solveConflict(causes, [v.packageName], {
-            searchInRange: !!cmdObj.search_in_range
-          })
-        );
+        printNoConflictSituation([v.packageName], await solver.solveConflict(causes, [v.packageName]));
       } else if (target === v.packageName) {
         printNoConflictSituation(
           args.slice(0, args.length - 1),
-          await solver.solveConflict(causes, args.slice(0, args.length - 1), {
-            searchInRange: !!cmdObj.search_in_range
-          })
+          await solver.solveConflict(causes, args.slice(0, args.length - 1))
         );
       }
     });
@@ -66,7 +58,7 @@ pcs
     const packNum = option.packnum ? Number(option.packnum) : PACK_NUM;
     const vernum = option.vernum ? Number(option.vernum) : VERSION_NUM;
     const repository = new MockPackageRepository(packNum, vernum);
-    const satSolver = new SatConflictSolver(repository);
+    const satSolver = new SatConflictSolverLatestVersion(repository);
     const bruteSolver = new BruteforceConflictSolver(repository);
     const dep = "dep";
     const causes = new Array(packNum)
@@ -74,12 +66,12 @@ pcs
       .map<Package>((v, i) => ({ name: i.toString(), version: new SemVer("1.0.0") }));
     console.log("sat solver");
     console.time("sat-solver");
-    console.log((await satSolver.solveConflict(causes, [dep], { searchInRange: false })).length);
+    console.log((await satSolver.solveConflict(causes, [dep])).length);
     // printNoConflictSituation([dep], await satSolver.solveConflict(causes, [dep], { searchInRange: false }));
     console.timeEnd("sat-solver");
     console.log("brute solver");
     console.time("brute-solver");
-    console.log((await bruteSolver.solveConflict(causes, [dep], { searchInRange: false })).length);
+    console.log((await bruteSolver.solveConflict(causes, [dep])).length);
     // printNoConflictSituation([dep], await bruteSolver.solveConflict(causes, [dep], { searchInRange: false }));
     console.timeEnd("brute-solver");
   });
