@@ -1,4 +1,5 @@
-import { ConflictPackage, Package, NoConflictSituation } from "./type";
+import { ConflictPackage, Package } from "./type";
+import { NoConflictSituation } from "../solver/conflict_solver";
 import chalk = require("chalk");
 
 export const printConflitResult = (conflictResult: ConflictPackage[]): void => {
