@@ -26,7 +26,7 @@
     "npm-registry-package-info": "^1.0.5",
     "package-json": "^6.4.0",
     "progress": "^2.0.3",
-    "semver": "^6.0.1"
+    "semver": "^7.5.2"
   },
   "devDependencies": {
     "@types/progress": "^2.0.3",
